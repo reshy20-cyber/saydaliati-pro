@@ -2,6 +2,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics.js";
 import { getFirestore, doc, setDoc, onSnapshot, runTransaction, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+
+
 const firebaseConfig = {
   apiKey: "AIzaSyBBsWY5RkBHoph7EQegUNCbwCjGNCeKF4g",
   authDomain: "saydaliati-pro.firebaseapp.com",
