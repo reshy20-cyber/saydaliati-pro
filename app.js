@@ -23,6 +23,7 @@ let state = {
 
 let cart = [];
 let checkoutInProgress = false;
+let activeInventoryFilter = 'all';
 const validStock = i => Number.isSafeInteger(i.qty) && i.qty > 0 && (!i.expiryDate || i.expiryDate >= todayLocal());
 const fefoBatches = (inventory, item) => inventory.filter(i => (item.barcode && i.barcode === item.barcode) || i.id === item.id).filter(validStock).sort((a,b) => (a.expiryDate || '9999-12-31').localeCompare(b.expiryDate || '9999-12-31'));
 
@@ -41,35 +42,41 @@ export function initCloudSync() {
 }
 
 function updateUI() {
-  const sales = state.salesTotal || 0;
+  const sales = Number(state.salesTotal) || 0;
   const dashSales = document.getElementById('dash-sales');
   if (dashSales) dashSales.innerText = `£${sales.toFixed(2)}`;
   
   const dashItems = document.getElementById('dash-items-count');
   if (dashItems) dashItems.innerText = String((state.inventory || []).length);
 
-  const lowStock = (state.inventory || []).filter(i => i.qty < 50).length;
+  const lowStock = (state.inventory || []).filter(i => Number.isFinite(i.qty) && i.qty < 50).length;
   const dashLow = document.getElementById('dash-low-stock');
   if (dashLow) dashLow.innerText = `${lowStock} صنفاً`;
 
   const nearExpiry = state.inventory.filter(i => {
+    if (!i.expiryDate) return false;
     const diff = new Date(i.expiryDate + "T23:59:59") - new Date();
     return diff > 0 && diff < (90 * 24 * 60 * 60 * 1000);
   }).length;
   const dashNear = document.getElementById('dash-near-expiry');
   if (dashNear) dashNear.innerText = `${nearExpiry} صنفاً`;
 
-  renderInventoryList(state.inventory);
+  renderInventoryList(state.inventory, activeInventoryFilter);
   renderCart();
 }
 
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 function renderInventoryList(items, filter = 'all') {
   const container = document.getElementById('inventory-cards-container');
   if (!container) return;
 
   let filtered = items;
   if (filter === 'near_expiry') {
-    filtered = items.filter(i => new Date(i.expiryDate + "T23:59:59") - new Date() < (90 * 24 * 60 * 60 * 1000));
+    filtered = items.filter(i => {
+      if (!i.expiryDate) return false;
+      const diff = new Date(i.expiryDate + "T23:59:59") - new Date();
+      return diff >= 0 && diff < 90 * 24 * 60 * 60 * 1000;
+    });
   } else if (filter === 'low_stock') {
     filtered = items.filter(i => i.qty < 50);
   }
@@ -82,10 +89,10 @@ function renderInventoryList(items, filter = 'all') {
       <div class="flex items-center gap-3">
         <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-xs font-bold text-blue-500 shadow-inner">💊</div>
         <div class="space-y-0.5">
-          <h4 class="font-extrabold text-slate-800 text-sm">${item.name}</h4>
-          <p class="text-[11px] text-slate-400">${item.generic}</p>
+          <h4 class="font-extrabold text-slate-800 text-sm">${escapeHtml(item.name)}</h4>
+          <p class="text-[11px] text-slate-400">${escapeHtml(item.generic)}</p>
           <div class="text-emerald-600 font-extrabold text-xs">£${item.price.toFixed(2)}</div>
-          ${item.qty <= 24 ? `<div class="text-[10px] text-red-500 font-bold flex items-center gap-1">📅 تنتهي: ${item.expiryDate}</div>` : ''}
+          ${item.qty <= 24 ? `<div class="text-[10px] text-red-500 font-bold flex items-center gap-1">📅 تنتهي: ${escapeHtml(item.expiryDate)}</div>` : ''}
         </div>
       </div>
       <div class="flex items-center gap-2">
@@ -93,7 +100,7 @@ function renderInventoryList(items, filter = 'all') {
           <div class="text-[9px] text-slate-400 font-normal">المخزون</div>
           <div>${item.qty}</div>
         </div>
-        <button onclick="window.addToCart('${item.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white w-9 h-9 rounded-xl font-bold flex items-center justify-center shadow transition text-sm">+</button>
+        <button data-add-id="${escapeHtml(item.id)}" class="bg-emerald-600 hover:bg-emerald-700 text-white w-9 h-9 rounded-xl font-bold flex items-center justify-center shadow transition text-sm">+</button>
       </div>
     `;
     container.appendChild(card);
@@ -105,6 +112,7 @@ window.filterInventory = function(type, btn) {
     b.className = "inv-filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-white text-slate-600 shadow-sm border border-slate-100";
   });
   btn.className = "inv-filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-emerald-600 text-white shadow";
+  activeInventoryFilter = type;
   renderInventoryList(state.inventory, type);
 };
 
@@ -137,7 +145,7 @@ window.updateCartQty = function(id, delta) {
   const item = state.inventory.find(i => i.id === id);
   if (!exist) return;
   const newQty = exist.quantity + delta;
-  if (!item || newQty > item.qty) return alert('الكمية تتجاوز المخزون المتوفر!');
+  if (newQty > 0 && (!item || !validStock(item) || newQty > item.qty)) return alert('الكمية تتجاوز المخزون الصالح والمتوفر!');
   if (newQty <= 0) {
     cart = cart.filter(c => c.id !== id);
   } else {
@@ -172,16 +180,16 @@ function renderCart() {
     div.className = "flex justify-between items-center bg-white p-3.5 rounded-2xl shadow-sm border border-slate-100";
     div.innerHTML = `
       <div class="flex items-center gap-3">
-        <button onclick="window.removeFromCart('${i.id}')" class="text-red-400 hover:text-red-600 text-base">🗑️</button>
+        <button data-remove-id="${escapeHtml(i.id)}" class="text-red-400 hover:text-red-600 text-base">🗑️</button>
         <div>
-          <h4 class="font-extrabold text-slate-800 text-sm">${i.name}</h4>
+          <h4 class="font-extrabold text-slate-800 text-sm">${escapeHtml(i.name)}</h4>
           <span class="text-emerald-600 font-extrabold text-xs">£${i.price.toFixed(2)}</span>
         </div>
       </div>
       <div class="flex items-center gap-2.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-100">
-        <button onclick="window.updateCartQty('${i.id}', -1)" class="w-6 h-6 rounded-lg bg-white shadow-sm font-bold text-slate-700 flex items-center justify-center text-xs">-</button>
+        <button data-qty-id="${escapeHtml(i.id)}" data-delta="-1" class="w-6 h-6 rounded-lg bg-white shadow-sm font-bold text-slate-700 flex items-center justify-center text-xs">-</button>
         <span class="font-extrabold text-sm w-5 text-center text-slate-800">${i.quantity}</span>
-        <button onclick="window.updateCartQty('${i.id}', 1)" class="w-6 h-6 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-xs shadow-sm">+</button>
+        <button data-qty-id="${escapeHtml(i.id)}" data-delta="1" class="w-6 h-6 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-xs shadow-sm">+</button>
       </div>
     `;
     container.appendChild(div);
@@ -231,14 +239,15 @@ window.checkout = async function() {
 window.addNewProduct = async function(e) {
   e.preventDefault();
   const name = document.getElementById('new-name').value.trim();
-  const generic = document.getElementById('new-generic').value;
-  const barcode = document.getElementById('new-barcode').value;
+  const generic = document.getElementById('new-generic').value.trim();
+  const barcode = document.getElementById('new-barcode').value.trim();
   const expiryDate = document.getElementById('new-expiry').value;
   const price = parseFloat(document.getElementById('new-price').value);
-  const qty = parseInt(document.getElementById('new-qty').value);
+  const qtyRaw = document.getElementById('new-qty').value.trim();
+  const qty = Number(qtyRaw);
 
   if (expiryDate && expiryDate < todayLocal()) return alert('لا يمكن إضافة دفعة منتهية الصلاحية');
-  if (!name || !Number.isFinite(price) || price < 0 || !Number.isSafeInteger(qty) || qty < 0 || !expiryDate) return alert('يرجى إدخال بيانات صحيحة');
+  if (!name || !Number.isFinite(price) || price < 0 || !qtyRaw || !Number.isSafeInteger(qty) || qty < 0 || !expiryDate) return alert('يرجى إدخال بيانات صحيحة');
   const docRef = doc(db, "pharmacy", "main_branch");
   try { await runTransaction(db, async (t) => {
     const snap = await t.get(docRef);
@@ -296,4 +305,14 @@ document.addEventListener('DOMContentLoaded', () => {
   barcode.addEventListener('touchstart', () => { timer = setTimeout(scanBarcode, 650); }, {passive:true});
   for (const event of ['touchend','touchcancel','touchmove']) barcode.addEventListener(event, () => clearTimeout(timer), {passive:true});
   barcode.addEventListener('dblclick', scanBarcode);
+});
+
+// Event delegation avoids embedding medicine IDs in JavaScript attributes.
+document.addEventListener('click', event => {
+  const add = event.target.closest('[data-add-id]');
+  const remove = event.target.closest('[data-remove-id]');
+  const qty = event.target.closest('[data-qty-id]');
+  if (add) window.addToCart(add.dataset.addId);
+  else if (remove) window.removeFromCart(remove.dataset.removeId);
+  else if (qty) window.updateCartQty(qty.dataset.qtyId, Number(qty.dataset.delta));
 });
