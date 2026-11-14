@@ -5,6 +5,73 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>صيدليتي | SAYDALIATI PRO</title>
   <script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+:root{--forest:#003e30;--green:#006b3d;--gold:#f4c66c}
+*{box-sizing:border-box}body{background:#e9edf0!important;font-family:system-ui,-apple-system,"Arial",sans-serif!important;color:#102e25}
+body>div{border:0!important;border-radius:0!important;max-width:430px;margin:auto;background:linear-gradient(#f7fafb,#edf2f5)!important;box-shadow:0 0 35px #19392a22!important}
+#screen-home,#screen-inventory,#screen-pos{padding:0 14px 18px!important}
+#screen-home>div:first-child{margin:0 -14px 13px!important;padding:20px 18px 16px!important;border-radius:0 0 28% 5% / 0 0 12% 3%!important;background:linear-gradient(145deg,#003a2c,#00533b 67%,#00683e)!important;border-bottom:5px solid #e7bd6b;box-shadow:0 5px 14px #003b2b33!important}
+#screen-home>div:first-child>div:first-child{min-height:82px;justify-content:center;position:relative}
+#screen-home>div:first-child>div:first-child>div:first-child{flex-direction:row-reverse;gap:12px!important}
+#screen-home h1{font-size:34px!important;line-height:1.15;font-weight:900!important;letter-spacing:0!important}
+#screen-home h1+p{font-size:17px!important;color:white!important;letter-spacing:.4px!important}
+#screen-home .brand-mark{font-size:30px;color:white;display:grid;place-items:center;width:62px;height:56px;border:3px solid white;border-radius:4px 4px 28px 28px;background:linear-gradient(150deg,#009d59,#004e32);box-shadow:0 2px 0 #dbb45e}
+#screen-home>div:first-child>div:first-child>div:last-child{position:absolute;right:0;top:0}
+#screen-home>div:first-child>div:nth-child(2) p{font-size:12px!important;color:white!important;font-weight:800!important}
+#screen-home>div:first-child>div:last-child{background:white!important;color:#073c2c!important;border:0!important;border-radius:16px!important;box-shadow:0 5px 12px #001b1630!important;padding:13px 12px!important;margin-bottom:-25px;margin-top:12px;font-size:12px!important}
+#screen-home>div:first-child>div:last-child span{color:#064e36}
+#screen-home>div:nth-child(2){margin-top:32px;gap:9px!important}
+#screen-home>div:nth-child(2)>div{min-height:107px!important;padding:12px 8px!important;border-radius:16px!important;text-align:center;align-items:center;justify-content:center;box-shadow:0 3px 6px #20382b28!important}
+#screen-home>div:nth-child(2)>div:nth-child(1){background:linear-gradient(140deg,#09617a,#002c49)!important}
+#screen-home>div:nth-child(2)>div:nth-child(2){background:linear-gradient(140deg,#00945a,#00502f)!important}
+#screen-home>div:nth-child(2)>div:nth-child(n+3){background:linear-gradient(145deg,#fff4d5,#ffdfa0)!important;border:0!important}
+#screen-home>div:nth-child(2)>div>div:first-child{margin:0!important;justify-content:center}
+#screen-home>div:nth-child(2)>div>div:first-child span{padding:0!important;background:none!important;font-size:22px!important}
+#screen-home>div:nth-child(2)>div>div:first-child svg{width:25px;height:25px}
+#screen-home>div:nth-child(2)>div p{font-size:12px!important;font-weight:800!important}
+#screen-home>div:nth-child(2)>div h3{font-size:22px!important}
+#screen-home>div:nth-child(3){gap:8px!important;margin-top:13px!important}
+#screen-home>div:nth-child(3)>button{padding:10px 2px!important;min-width:0;min-height:79px;border-radius:16px!important;border:1px solid #d7e0e4!important;box-shadow:0 3px 5px #0d2b2430!important;font-size:11px!important;color:#101b19!important;gap:5px!important}
+#screen-home>div:nth-child(3)>button>span{background:none!important;box-shadow:none!important;width:auto!important;height:31px!important;color:#00683d!important}
+#screen-home>div:nth-child(3)>button svg{width:27px;height:27px;stroke-width:2.5}
+#screen-inventory>div:first-child,#screen-pos>div:first-child{margin:0 -14px 16px!important;padding:30px 16px 24px!important;border-radius:0 0 28% 5% / 0 0 16% 4%!important;background:linear-gradient(130deg,#00392c,#00533c)!important;min-height:120px;box-shadow:none!important}
+#screen-inventory h2,#screen-pos h2{font-size:22px!important}
+#screen-inventory input,#screen-pos input{height:53px;font-size:13px!important;border-radius:20px!important;box-shadow:0 3px 10px #122f2a24!important}
+#screen-inventory .inv-filter-btn{padding:9px 12px!important;border-radius:20px!important;white-space:nowrap}
+#screen-pos>div:nth-child(3){border-radius:19px!important}
+#screen-pos button[onclick="window.checkout()"]{background:linear-gradient(#008c50,#00432f)!important;border:2px solid #f4ca73!important;border-radius:17px!important;font-size:15px!important}
+nav,body>div>div:last-child:has(.nav-btn){background:linear-gradient(125deg,#003b2c,#00533a)!important;border-radius:24px 24px 0 0!important}
+.nav-btn{color:white!important}.nav-btn svg{color:white!important}
+.hidden{display:none!important}
+</style>
+
+<style id="approved-reference-v4">
+/* Exact user-supplied screenshot artwork for the branded header; no invented logo */
+html,body{margin:0!important;background:#edf2f5!important}
+body>div{border:0!important;border-radius:0!important;max-width:430px!important;min-height:100dvh!important;box-shadow:none!important}
+#screen-home{padding:0 13px 20px!important}
+#screen-home>div:first-child{height:209px!important;min-height:209px!important;margin:0 -13px 37px!important;padding:0 12px!important;border:0!important;border-radius:0!important;overflow:visible!important;background:#004634 url('header-reference.jpg') center top/100% 175px no-repeat!important;box-shadow:none!important}
+#screen-home>div:first-child>div:first-child,#screen-home>div:first-child>div:nth-child(2){visibility:hidden!important;height:0!important;min-height:0!important;padding:0!important;margin:0!important;overflow:hidden!important}
+#screen-home>div:first-child>div:last-child{position:absolute!important;top:166px!important;left:12px!important;right:12px!important;margin:0!important;padding:12px 10px!important;min-height:49px!important;border-radius:17px!important;background:linear-gradient(#fff,#f6f8f9)!important;box-shadow:0 4px 12px #002e2833!important;color:#063c2d!important;z-index:2;font-size:12px!important}
+#screen-home>div:nth-child(2){margin-top:0!important;gap:9px!important}
+#screen-home>div:nth-child(2)>div{min-height:104px!important;border-radius:15px!important;padding:9px 5px!important}
+#screen-home>div:nth-child(2)>div>div:first-child{margin:0!important}
+#screen-home>div:nth-child(2)>div p{font-size:12px!important;margin:2px 0!important}
+#screen-home>div:nth-child(2)>div h3{font-size:21px!important}
+#screen-home>div:nth-child(3){gap:8px!important;margin-top:13px!important}
+#screen-home>div:nth-child(3)>button{min-height:78px!important;padding:9px 2px!important;background:linear-gradient(#fff,#f6f8fa)!important;border:1px solid #d4dee2!important;border-radius:15px!important;box-shadow:0 3px 5px #163e3029!important;font-size:11px!important;color:#111!important}
+#screen-home>div:nth-child(3)>button>span{color:#006139!important}
+#screen-home>div:nth-child(3)>button svg{width:29px!important;height:29px!important;stroke-width:2.6!important}
+nav{background:linear-gradient(145deg,#003a2d,#00553b)!important;border-top:2px solid #c8a85b!important;border-radius:24px 24px 0 0!important;padding:11px 12px max(11px,env(safe-area-inset-bottom))!important;box-shadow:0 -4px 18px #002a2233!important}
+nav button{font-size:11px!important;color:white!important;gap:3px!important}
+nav button:first-child{color:#ffe29a!important}
+nav svg{width:22px;height:22px}
+#screen-inventory>div:first-child,#screen-pos>div:first-child{border-radius:0 0 30px 10px!important;background:linear-gradient(140deg,#003c30,#00513e)!important;min-height:95px!important}
+#screen-inventory input,#screen-pos input{background:#fff!important}
+#screen-pos button[onclick="window.checkout()"]{border:2px solid #eac469!important}
+@media(min-width:550px){body>div{margin:20px auto!important;border-radius:25px!important;min-height:850px!important}}
+</style>
 </head>
 <body class="bg-slate-950 font-sans min-h-screen flex justify-center items-center p-0 sm:p-4">
 
@@ -21,7 +88,7 @@
         <div class="bg-emerald-700 text-white p-5 rounded-[32px] shadow-lg space-y-3 relative overflow-hidden">
           <div class="flex justify-between items-center">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-emerald-600 rounded-2xl flex items-center justify-center text-xl shadow-inner">💊</div>
+              <div class="w-10 h-10 bg-emerald-600 rounded-2xl flex items-center justify-center text-xl shadow-inner"><span class="brand-mark">✚</span></div>
               <div>
                 <h1 class="font-extrabold text-base tracking-wide">صيدليتي</h1>
                 <p class="text-[11px] font-bold tracking-wider text-emerald-200">SAYDALIATI</p>
@@ -37,7 +104,7 @@
           <!-- منسدل الصيدلية الحالية -->
           <div class="bg-emerald-800/90 px-4 py-2.5 rounded-2xl flex justify-between items-center text-xs font-bold border border-emerald-600/50 shadow-inner">
             <div class="flex items-center gap-2">
-              <span>🏥</span>
+              <span><i data-lucide="store"></i></span>
               <span>الصيدلية الحالية: الصيدلية الرئيسية</span>
             </div>
             <span>▼</span>
@@ -50,7 +117,7 @@
           <div class="bg-emerald-900 text-white p-4 rounded-3xl shadow-md flex flex-col justify-between relative overflow-hidden">
             <div class="absolute -right-2 -bottom-2 opacity-10 text-6xl">📈</div>
             <div class="flex justify-between items-start mb-3">
-              <span class="bg-emerald-800/80 p-2 rounded-2xl text-emerald-300 text-base">📊</span>
+              <span class="bg-emerald-800/80 p-2 rounded-2xl text-emerald-300 text-base"><i data-lucide="chart-no-axes-column-increasing"></i></span>
             </div>
             <div>
               <p class="text-xs text-emerald-200 font-medium mb-0.5">مبيعات اليوم</p>
@@ -62,7 +129,7 @@
           <div class="bg-emerald-700 text-white p-4 rounded-3xl shadow-md flex flex-col justify-between relative overflow-hidden">
             <div class="absolute -right-2 -bottom-2 opacity-10 text-6xl">🏷️</div>
             <div class="flex justify-between items-start mb-3">
-              <span class="bg-emerald-600/80 p-2 rounded-2xl text-white text-base">💊</span>
+              <span class="bg-emerald-600/80 p-2 rounded-2xl text-white text-base"><i data-lucide="pill"></i></span>
             </div>
             <div>
               <p class="text-xs text-emerald-100 font-medium mb-0.5">عدد الأصناف</p>
@@ -73,7 +140,7 @@
           <!-- منخفض المخزون -->
           <div class="bg-amber-100/80 border border-amber-200 text-amber-900 p-4 rounded-3xl shadow-sm flex flex-col justify-between">
             <div class="flex justify-between items-start mb-3">
-              <span class="bg-amber-200 p-2 rounded-2xl text-amber-700 text-base">📦</span>
+              <span class="bg-amber-200 p-2 rounded-2xl text-amber-700 text-base"><i data-lucide="package"></i></span>
             </div>
             <div>
               <p class="text-[11px] text-amber-700 font-bold mb-0.5">منخفض المخزون</p>
@@ -84,7 +151,7 @@
           <!-- قريب من الصلاحية -->
           <div class="bg-amber-100/80 border border-amber-200 text-amber-900 p-4 rounded-3xl shadow-sm flex flex-col justify-between">
             <div class="flex justify-between items-start mb-3">
-              <span class="bg-amber-200 p-2 rounded-2xl text-amber-700 text-base">⚠️</span>
+              <span class="bg-amber-200 p-2 rounded-2xl text-amber-700 text-base"><i data-lucide="triangle-alert"></i></span>
             </div>
             <div>
               <p class="text-[11px] text-amber-700 font-bold mb-0.5">قريب من الصلاحية</p>
@@ -96,40 +163,40 @@
         <!-- شبكة أزرار العمليات 4x3 المطابقة للصورة الأصلية تماماً -->
         <div class="grid grid-cols-4 gap-2.5 text-center text-[11px] font-extrabold text-slate-700">
           <button onclick="window.switchScreen('screen-pos')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-emerald-50 w-10 h-10 rounded-xl flex items-center justify-center text-emerald-600 shadow-inner">🛒</span>المبيعات
+            <span class="text-xl bg-emerald-50 w-10 h-10 rounded-xl flex items-center justify-center text-emerald-600 shadow-inner"><i data-lucide="shopping-cart"></i></span>المبيعات
           </button>
           <button onclick="alert('شاشة الفواتير')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-blue-50 w-10 h-10 rounded-xl flex items-center justify-center text-blue-600 shadow-inner">📄</span>الفواتير
+            <span class="text-xl bg-blue-50 w-10 h-10 rounded-xl flex items-center justify-center text-blue-600 shadow-inner"><i data-lucide="file-text"></i></span>الفواتير
           </button>
           <button onclick="window.switchScreen('screen-inventory')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-purple-50 w-10 h-10 rounded-xl flex items-center justify-center text-purple-600 shadow-inner">💊</span>الأدوية
+            <span class="text-xl bg-purple-50 w-10 h-10 rounded-xl flex items-center justify-center text-purple-600 shadow-inner"><i data-lucide="pill"></i></span>الأدوية
           </button>
           <button onclick="window.switchScreen('screen-inventory')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-amber-50 w-10 h-10 rounded-xl flex items-center justify-center text-amber-600 shadow-inner">📦</span>المخزون
+            <span class="text-xl bg-amber-50 w-10 h-10 rounded-xl flex items-center justify-center text-amber-600 shadow-inner"><i data-lucide="boxes"></i></span>المخزون
           </button>
           <button onclick="window.switchScreen('screen-add-product')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-indigo-50 w-10 h-10 rounded-xl flex items-center justify-center text-indigo-600 shadow-inner">📥</span>المشتريات
+            <span class="text-xl bg-indigo-50 w-10 h-10 rounded-xl flex items-center justify-center text-indigo-600 shadow-inner"><i data-lucide="shopping-basket"></i></span>المشتريات
           </button>
           <button onclick="alert('قسم الموردين')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-rose-50 w-10 h-10 rounded-xl flex items-center justify-center text-rose-600 shadow-inner">🤝</span>الموردون
+            <span class="text-xl bg-rose-50 w-10 h-10 rounded-xl flex items-center justify-center text-rose-600 shadow-inner"><i data-lucide="truck"></i></span>الموردون
           </button>
           <button onclick="alert('التقارير والأرباح')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-teal-50 w-10 h-10 rounded-xl flex items-center justify-center text-teal-600 shadow-inner">📊</span>التقارير
+            <span class="text-xl bg-teal-50 w-10 h-10 rounded-xl flex items-center justify-center text-teal-600 shadow-inner"><i data-lucide="chart-no-axes-combined"></i></span>التقارير
           </button>
           <button onclick="alert('إدارة الفروع')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-cyan-50 w-10 h-10 rounded-xl flex items-center justify-center text-cyan-600 shadow-inner">🏢</span>الفروع
+            <span class="text-xl bg-cyan-50 w-10 h-10 rounded-xl flex items-center justify-center text-cyan-600 shadow-inner"><i data-lucide="store"></i></span>الفروع
           </button>
           <button onclick="alert('إدارة الموظفين والصلاحيات')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-emerald-50 w-10 h-10 rounded-xl flex items-center justify-center text-emerald-600 shadow-inner">👥</span>الموظفون
+            <span class="text-xl bg-emerald-50 w-10 h-10 rounded-xl flex items-center justify-center text-emerald-600 shadow-inner"><i data-lucide="users"></i></span>الموظفون
           </button>
           <button onclick="alert('الإعدادات العامة')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-slate-100 w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 shadow-inner">⚙️</span>الإعدادات
+            <span class="text-xl bg-slate-100 w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 shadow-inner"><i data-lucide="settings"></i></span>الإعدادات
           </button>
           <button onclick="alert('النسخ الاحتياطي السحابي')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-sky-50 w-10 h-10 rounded-xl flex items-center justify-center text-sky-600 shadow-inner">☁️</span>النسخ الاحتياطي
+            <span class="text-xl bg-sky-50 w-10 h-10 rounded-xl flex items-center justify-center text-sky-600 shadow-inner"><i data-lucide="cloud-upload"></i></span>النسخ الاحتياطي
           </button>
           <button onclick="alert('ماسح الباركود السريع')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-violet-50 w-10 h-10 rounded-xl flex items-center justify-center text-violet-600 shadow-inner">📷</span>الباركود
+            <span class="text-xl bg-violet-50 w-10 h-10 rounded-xl flex items-center justify-center text-violet-600 shadow-inner"><i data-lucide="scan-barcode"></i></span>الباركود
           </button>
         </div>
       </div>
@@ -231,16 +298,16 @@
     <!-- شريط التنقل السفلي الثابت المطابق للصورة الأصلية تماماً -->
     <nav class="absolute bottom-0 left-0 right-0 bg-slate-900 text-white py-3 px-6 flex justify-between items-center text-[11px] font-bold border-t border-slate-800 shadow-2xl z-50">
       <button onclick="window.switchScreen('screen-home')" id="nav-home" class="nav-btn flex flex-col items-center gap-1 text-amber-400 transition">
-        <span class="text-base">🏠</span>الرئيسية
+        <span class="text-base"><i data-lucide="house"></i></span>الرئيسية
       </button>
       <button onclick="window.switchScreen('screen-pos')" id="nav-pos" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-white transition">
-        <span class="text-base">🛒</span>المبيعات
+        <span class="text-base"><i data-lucide="shopping-cart"></i></span>المبيعات
       </button>
       <button onclick="window.switchScreen('screen-inventory')" id="nav-inv" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-white transition">
-        <span class="text-base">📦</span>المخزون
+        <span class="text-base"><i data-lucide="boxes"></i></span>المخزون
       </button>
       <button onclick="alert('قسم التقارير والأرباح المالية')" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-white transition">
-        <span class="text-base">📈</span>التقارير
+        <span class="text-base"><i data-lucide="chart-no-axes-column-increasing"></i></span>التقارير
       </button>
       <button onclick="alert('خيارات إضافية للمزيد')" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-white transition">
         <span class="text-base">⋯</span>المزيد
@@ -248,6 +315,8 @@
     </nav>
 
   </div>
-  <script type="module" src="app.js"></script>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+<script>document.addEventListener("DOMContentLoaded",()=>{if(window.lucide)lucide.createIcons()});</script>
+<script type="module" src="app.js"></script>
 </body>
 </html>

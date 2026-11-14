@@ -23,6 +23,9 @@ let state = {
 
 let cart = [];
 let checkoutInProgress = false;
+const validStock = i => Number.isSafeInteger(i.qty) && i.qty > 0 && (!i.expiryDate || i.expiryDate >= todayLocal());
+const fefoBatches = (inventory, item) => inventory.filter(i => (item.barcode && i.barcode === item.barcode) || i.id === item.id).filter(validStock).sort((a,b) => (a.expiryDate || '9999-12-31').localeCompare(b.expiryDate || '9999-12-31'));
+
 function todayLocal() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
 
 export function initCloudSync() {
@@ -118,14 +121,13 @@ window.switchScreen = function(screenId) {
 
 window.addToCart = function(id) {
   const item = state.inventory.find(i => i.id === id);
-  if (!item || item.qty <= 0) return alert('نفد المخزون!');
-  if (item.expiryDate && item.expiryDate < todayLocal()) return alert('لا يمكن بيع دواء منتهي الصلاحية');
-  const exist = cart.find(c => c.id === id);
-  if (exist) {
-    if (exist.quantity < item.qty) exist.quantity++;
-  } else {
-    cart.push({ ...item, quantity: 1 });
-  }
+  if (!item) return alert('الصنف غير موجود');
+  const batches = fefoBatches(state.inventory, item);
+  const chosen = batches.find(i => (cart.find(c => c.id === i.id)?.quantity || 0) < i.qty);
+  if (!chosen) return alert('لا توجد دفعة صالحة ومتاحة للبيع');
+  const exist = cart.find(c => c.id === chosen.id);
+  if (exist) exist.quantity++;
+  else cart.push({ ...chosen, quantity: 1 });
   renderCart();
   window.switchScreen('screen-pos');
 };
@@ -211,7 +213,7 @@ window.checkout = async function() {
         if (!Number.isFinite(item.price) || item.price < 0) throw new Error('سعر غير صالح');
         item.qty -= c.quantity;
         total += item.price * c.quantity;
-        invoiceItems.push({ id: item.id, name: item.name, quantity: c.quantity, unitPrice: item.price });
+        invoiceItems.push({ id: item.id, name: item.name, barcode: item.barcode || '', expiryDate: item.expiryDate || '', quantity: c.quantity, unitPrice: item.price });
       }
       total = Math.round(total * 100) / 100;
       t.update(docRef, { inventory: inv, salesTotal: Math.round(((data.salesTotal || 0) + total) * 100) / 100 });
@@ -235,13 +237,14 @@ window.addNewProduct = async function(e) {
   const price = parseFloat(document.getElementById('new-price').value);
   const qty = parseInt(document.getElementById('new-qty').value);
 
+  if (expiryDate && expiryDate < todayLocal()) return alert('لا يمكن إضافة دفعة منتهية الصلاحية');
   if (!name || !Number.isFinite(price) || price < 0 || !Number.isSafeInteger(qty) || qty < 0 || !expiryDate) return alert('يرجى إدخال بيانات صحيحة');
   const docRef = doc(db, "pharmacy", "main_branch");
   try { await runTransaction(db, async (t) => {
     const snap = await t.get(docRef);
     if (!snap.exists()) throw new Error('لم يتم تهيئة المخزون');
     let inv = snap.data().inventory || [];
-    inv.push({ id: 'item_' + Date.now(), name, generic, barcode, expiryDate, price, qty });
+    inv.push({ id: 'item_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7), name, generic, barcode, expiryDate, price, qty });
     t.update(docRef, { inventory: inv });
   }); } catch (e) { alert('تعذر حفظ الدواء: ' + (e.message || 'خطأ')); return; }
   alert('تمت إضافة الدواء بنجاح للمخزون والسحابة! 📥');
@@ -250,3 +253,47 @@ window.addNewProduct = async function(e) {
 };
 
 document.addEventListener('DOMContentLoaded', () => initCloudSync());
+
+// مسح الباركود: اضغط مطولاً على حقل الباركود في شاشة إضافة الدواء.
+// لا يُغيّر التصميم الأصلي؛ يظهر مربع الكاميرا مؤقتاً فقط.
+async function scanBarcode() {
+  if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia) {
+    alert('المسح بالكاميرا غير مدعوم في هذا المتصفح. يمكنك إدخال الباركود يدويًا.'); return;
+  }
+  let stream, raf;
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;color:white';
+  const video = document.createElement('video'); video.autoplay = true; video.playsInline = true;
+  video.style.cssText = 'width:100%;max-width:420px;border-radius:18px';
+  const close = document.createElement('button'); close.textContent = 'إغلاق الكاميرا';
+  close.style.cssText = 'background:#047857;padding:12px 25px;border-radius:12px';
+  const stop = () => { cancelAnimationFrame(raf); stream?.getTracks().forEach(t=>t.stop()); overlay.remove(); };
+  close.onclick = stop; overlay.append(video, close); document.body.append(overlay);
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+    video.srcObject = stream; await video.play();
+    const detector = new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code']});
+    let busy = false;
+    const frame = async () => {
+      if (!overlay.isConnected) return;
+      if (!busy && video.readyState >= 2) {
+        busy = true;
+        try { const found = await detector.detect(video); if (found.length) {
+          document.getElementById('new-barcode').value = found[0].rawValue; stop(); return;
+        }} catch(e) { console.warn('Barcode detection:',e); }
+        finally { busy = false; }
+      }
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+  } catch(e) { stop(); alert('تعذر تشغيل الكاميرا. تحقق من الأذونات واتصال HTTPS.'); }
+}
+window.scanBarcode = scanBarcode;
+document.addEventListener('DOMContentLoaded', () => {
+  const barcode = document.getElementById('new-barcode');
+  if (!barcode) return;
+  let timer;
+  barcode.addEventListener('touchstart', () => { timer = setTimeout(scanBarcode, 650); }, {passive:true});
+  for (const event of ['touchend','touchcancel','touchmove']) barcode.addEventListener(event, () => clearTimeout(timer), {passive:true});
+  barcode.addEventListener('dblclick', scanBarcode);
+});
