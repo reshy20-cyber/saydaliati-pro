@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>صيدليتي | SAYDALIATI PRO</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 font-sans min-h-screen flex justify-center items-center p-0 sm:p-4">
+
+  <!-- إطار محاكي الهاتف المطابق للصورة الأصلية بنسبة 100% -->
+  <div class="w-full sm:w-[420px] bg-slate-100 min-h-screen sm:min-h-[850px] sm:rounded-[45px] shadow-2xl flex flex-col justify-between relative overflow-hidden border-4 border-slate-800">
+    
+    <!-- محتوى الشاشات -->
+    <div class="flex-1 overflow-y-auto pb-24">
+      
+      <!-- 1. الشاشة الرئيسية (Home - مطابقة للشاشة الوسطى في الصورة) -->
+      <div id="screen-home" class="screen-view p-4 space-y-4">
+        
+        <!-- الهيدر الأخضر العلوي المتناسق -->
+        <div class="bg-emerald-700 text-white p-5 rounded-[32px] shadow-lg space-y-3 relative overflow-hidden">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-emerald-600 rounded-2xl flex items-center justify-center text-xl shadow-inner">💊</div>
+              <div>
+                <h1 class="font-extrabold text-base tracking-wide">صيدليتي</h1>
+                <p class="text-[11px] font-bold tracking-wider text-emerald-200">SAYDALIATI</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="alert('القائمة الرئيسية')" class="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center text-lg shadow-sm">☰</button>
+            </div>
+          </div>
+          <div class="text-center py-1">
+            <p class="text-xs text-emerald-100 font-medium">نظام متكامل لإدارة الصيدليات والفروع</p>
+          </div>
+          <!-- منسدل الصيدلية الحالية -->
+          <div class="bg-emerald-800/90 px-4 py-2.5 rounded-2xl flex justify-between items-center text-xs font-bold border border-emerald-600/50 shadow-inner">
+            <div class="flex items-center gap-2">
+              <span>🏥</span>
+              <span>الصيدلية الحالية: الصيدلية الرئيسية</span>
+            </div>
+            <span>▼</span>
+          </div>
+        </div>
+
+        <!-- بطاقات الإحصائيات الأربع الكبرى (مطابقة للصورة) -->
+        <div class="grid grid-cols-2 gap-3">
+          <!-- مبيعات اليوم -->
+          <div class="bg-emerald-900 text-white p-4 rounded-3xl shadow-md flex flex-col justify-between relative overflow-hidden">
+            <div class="absolute -right-2 -bottom-2 opacity-10 text-6xl">📈</div>
+            <div class="flex justify-between items-start mb-3">
+              <span class="bg-emerald-800/80 p-2 rounded-2xl text-emerald-300 text-base">📊</span>
+            </div>
+            <div>
+              <p class="text-xs text-emerald-200 font-medium mb-0.5">مبيعات اليوم</p>
+              <h3 class="text-xl font-extrabold text-white" id="dash-sales">£1,245.50</h3>
+            </div>
+          </div>
+
+          <!-- عدد الأصناف -->
+          <div class="bg-emerald-700 text-white p-4 rounded-3xl shadow-md flex flex-col justify-between relative overflow-hidden">
+            <div class="absolute -right-2 -bottom-2 opacity-10 text-6xl">🏷️</div>
+            <div class="flex justify-between items-start mb-3">
+              <span class="bg-emerald-600/80 p-2 rounded-2xl text-white text-base">💊</span>
+            </div>
+            <div>
+              <p class="text-xs text-emerald-100 font-medium mb-0.5">عدد الأصناف</p>
+              <h3 class="text-xl font-extrabold text-white" id="dash-items-count">2,860</h3>
+            </div>
+          </div>
+
+          <!-- منخفض المخزون -->
+          <div class="bg-amber-100/80 border border-amber-200 text-amber-900 p-4 rounded-3xl shadow-sm flex flex-col justify-between">
+            <div class="flex justify-between items-start mb-3">
+              <span class="bg-amber-200 p-2 rounded-2xl text-amber-700 text-base">📦</span>
+            </div>
+            <div>
+              <p class="text-[11px] text-amber-700 font-bold mb-0.5">منخفض المخزون</p>
+              <h3 class="text-base font-extrabold text-amber-900" id="dash-low-stock">23 صنفاً</h3>
+            </div>
+          </div>
+
+          <!-- قريب من الصلاحية -->
+          <div class="bg-amber-100/80 border border-amber-200 text-amber-900 p-4 rounded-3xl shadow-sm flex flex-col justify-between">
+            <div class="flex justify-between items-start mb-3">
+              <span class="bg-amber-200 p-2 rounded-2xl text-amber-700 text-base">⚠️</span>
+            </div>
+            <div>
+              <p class="text-[11px] text-amber-700 font-bold mb-0.5">قريب من الصلاحية</p>
+              <h3 class="text-base font-extrabold text-amber-900" id="dash-near-expiry">18 صنفاً</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- شبكة أزرار العمليات 4x3 المطابقة للصورة الأصلية تماماً -->
+        <div class="grid grid-cols-4 gap-2.5 text-center text-[11px] font-extrabold text-slate-700">
+          <button onclick="window.switchScreen('screen-pos')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
+            <span class="text-xl bg-emerald-50 w-10 h-10 rounded-xl flex items-center justify-center text-emerald-600 shadow-inner">🛒</span>المبيعات
+          </button>
+          <button onclick="alert('شاشة الفواتير')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
+            <span class="text-xl bg-blue-50 w-10 h-10 rounded-xl flex items-center justify-center text-blue-600 shadow-inner">📄</span>الفواتير
+          </button>
+          <button onclick="window.switchScreen('screen-inventory')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
+            <span class="text-xl bg-purple-50 w-10 h-10 rounded-xl flex items-center justify-center text-purple-600 shadow-inner">💊</span>الأدوية
+          </button>
+          <button onclick="window.switchScreen('screen-inventory')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
+            <span class="text-xl bg-amber-50 w-10 h-10 rounded-xl flex items-center justify-center text-amber-600 shadow-inner">📦</span>المخزون
+          </button>
+          <button onclick="window.switchScreen('screen-add-product')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
+            <span class="text-xl bg-indigo-50 w-10 h-10 rounded-xl flex items-center justify-center text-indigo-600 shadow-inner">📥</span>المشتريات
+          </button>
+          <button onclick="alert('قسم الموردين')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
+            <span class="text-xl bg-rose-50 w-10 h-10 rounded-xl flex items-center justify-center text-rose-600 shadow-inner">🤝</span>الموردون
+          </button>
+          <button onclick="alert('التقارير والأرباح')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
+            <span class="text-xl bg-teal-50 w-10 h-10 rounded-xl flex items-center justify-center text-teal-600 shadow-inner">📊</span>التقارير
+          </button>
+          <button onclick="alert('إدارة الفروع')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
+            <span class="text-xl bg-cyan-50 w-10 h-10 rounded-xl flex items-center justify-center text-cyan-600 shadow-inner">🏢</span>الفروع
+          </button>
+          <button onclick="alert('إدارة الموظفين والصلاحيات')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
+            <span class="text-xl bg-emerald-50 w-10 h-10 rounded-xl flex items-center justify-center text-emerald-600 shadow-inner">👥</span>الموظفون
+          </button>
+          <button onclick="alert('الإعدادات العامة')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
+            <span class="text-xl bg-slate-100 w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 shadow-inner">⚙️</span>الإعدادات
+          </button>
+          <button onclick="alert('النسخ الاحتياطي السحابي')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
+            <span class="text-xl bg-sky-50 w-10 h-10 rounded-xl flex items-center justify-center text-sky-600 shadow-inner">☁️</span>النسخ الاحتياطي
+          </button>
+          <button onclick="alert('ماسح الباركود السريع')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
+            <span class="text-xl bg-violet-50 w-10 h-10 rounded-xl flex items-center justify-center text-violet-600 shadow-inner">📷</span>الباركود
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. شاشة الأدوية والمخزون (مطابقة للشاشة اليسرى في الصورة تماماً) -->
+      <div id="screen-inventory" class="screen-view hidden p-4 space-y-4">
+        <div class="flex justify-between items-center bg-emerald-700 text-white p-4 rounded-2xl shadow-sm">
+          <button onclick="window.switchScreen('screen-home')" class="font-bold text-sm bg-emerald-600 px-3 py-1 rounded-xl">◀ العودة</button>
+          <h2 class="font-extrabold text-base">الأدوية والمخزون</h2>
+          <button onclick="window.switchScreen('screen-add-product')" class="bg-white text-emerald-700 px-3 py-1.5 rounded-xl text-xs font-extrabold shadow">+ إضافة</button>
+        </div>
+
+        <!-- شريط البحث السريع والفلترة -->
+        <div class="space-y-2">
+          <div class="relative">
+            <input type="text" placeholder="🔍 البحث عن دواء (الاسم أو الباركود)" class="w-full bg-white border border-slate-200 p-3 rounded-2xl text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+          <div class="flex gap-2 overflow-x-auto pb-1 text-xs">
+            <button onclick="window.filterInventory('all', this)" class="inv-filter-btn px-4 py-1.5 rounded-full font-bold bg-emerald-600 text-white shadow">الكل</button>
+            <button onclick="window.filterInventory('low_stock', this)" class="inv-filter-btn px-4 py-1.5 rounded-full font-bold bg-white text-slate-600 shadow-sm border border-slate-100">منخفض المخزون</button>
+            <button onclick="window.filterInventory('near_expiry', this)" class="inv-filter-btn px-4 py-1.5 rounded-full font-bold bg-white text-slate-600 shadow-sm border border-slate-100">قريب من الصلاحية</button>
+          </div>
+        </div>
+
+        <!-- قائمة كاردات الأدوية -->
+        <div class="space-y-3" id="inventory-cards-container">
+          <!-- Dynamically generated -->
+        </div>
+      </div>
+
+      <!-- 3. شاشة نقطة البيع والمبيعات (مطابقة للشاشة اليمنى في الصورة تماماً) -->
+      <div id="screen-pos" class="screen-view hidden p-4 space-y-4">
+        <div class="flex justify-between items-center bg-emerald-700 text-white p-4 rounded-2xl shadow-sm">
+          <button onclick="window.switchScreen('screen-home')" class="font-bold text-sm bg-emerald-600 px-3 py-1 rounded-xl">◀ العودة</button>
+          <h2 class="font-extrabold text-base">المبيعات (نقطة البيع)</h2>
+          <span>🛒</span>
+        </div>
+
+        <div class="relative">
+          <input type="text" placeholder="🔍 البحث عن دواء أو مسح الباركود..." class="w-full bg-white border border-slate-200 p-3 rounded-2xl text-xs shadow-sm focus:outline-none">
+        </div>
+
+        <div class="bg-white p-4 rounded-3xl shadow-sm space-y-4">
+          <h3 class="font-extrabold text-sm text-slate-800 border-b pb-2">عناصر السلة الحالية</h3>
+          <div id="cart-items-container" class="space-y-3 max-h-72 overflow-y-auto pr-1">
+            <p class="text-slate-400 text-sm text-center py-12">السلة فارغة حالياً...</p>
+          </div>
+          
+          <div class="border-t pt-3 space-y-2 text-sm bg-slate-50 p-3 rounded-2xl">
+            <div class="flex justify-between text-slate-500 text-xs"><span>الإجمالي الفرعي:</span><span id="cart-subtotal" class="font-bold">£0.00</span></div>
+            <div class="flex justify-between text-slate-500 text-xs"><span>الخصم:</span><span class="font-bold">£0.00 🏷️</span></div>
+            <div class="flex justify-between font-extrabold text-base text-slate-900 pt-2 border-t"><span>الإجمالي النهائي:</span><span id="cart-final-total" class="text-emerald-600 text-xl">£0.00</span></div>
+          </div>
+
+          <button onclick="window.checkout()" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-3.5 rounded-2xl font-extrabold shadow-lg transition flex items-center justify-center gap-2 text-sm">
+            🛒 إتمام البيع وإصدار الفاتورة
+          </button>
+        </div>
+      </div>
+
+      <!-- 4. شاشة إضافة دواء جديد -->
+      <div id="screen-add-product" class="screen-view hidden p-4 space-y-4">
+        <div class="flex justify-between items-center bg-emerald-700 text-white p-4 rounded-2xl shadow-sm">
+          <button onclick="window.switchScreen('screen-home')" class="font-bold text-sm bg-emerald-600 px-3 py-1 rounded-xl">◀ العودة</button>
+          <h2 class="font-extrabold text-base">إضافة دواء جديد</h2>
+          <span>📦</span>
+        </div>
+        <form id="add-product-form" onsubmit="window.addNewProduct(event)" class="bg-white p-5 rounded-3xl shadow-sm space-y-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">اسم الدواء التجاري</label>
+            <input type="text" id="new-name" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-xs">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">الاسم العلمي (Generic)</label>
+            <input type="text" id="new-generic" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-xs">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">الباركود</label>
+            <input type="text" id="new-barcode" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-xs">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">تاريخ انتهاء الصلاحية</label>
+            <input type="date" id="new-expiry" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-xs">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">سعر البيع (£)</label>
+            <input type="number" step="0.01" id="new-price" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-xs">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">الكمية بالمخزون</label>
+            <input type="number" id="new-qty" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-xs">
+          </div>
+          <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-2xl font-extrabold shadow text-sm">حفظ الدواء في السحابة 📥</button>
+        </form>
+      </div>
+
+    </div>
+
+    <!-- شريط التنقل السفلي الثابت المطابق للصورة الأصلية تماماً -->
+    <nav class="absolute bottom-0 left-0 right-0 bg-slate-900 text-white py-3 px-6 flex justify-between items-center text-[11px] font-bold border-t border-slate-800 shadow-2xl z-50">
+      <button onclick="window.switchScreen('screen-home')" id="nav-home" class="nav-btn flex flex-col items-center gap-1 text-amber-400 transition">
+        <span class="text-base">🏠</span>الرئيسية
+      </button>
+      <button onclick="window.switchScreen('screen-pos')" id="nav-pos" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-white transition">
+        <span class="text-base">🛒</span>المبيعات
+      </button>
+      <button onclick="window.switchScreen('screen-inventory')" id="nav-inv" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-white transition">
+        <span class="text-base">📦</span>المخزون
+      </button>
+      <button onclick="alert('قسم التقارير والأرباح المالية')" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-white transition">
+        <span class="text-base">📈</span>التقارير
+      </button>
+      <button onclick="alert('خيارات إضافية للمزيد')" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-white transition">
+        <span class="text-base">⋯</span>المزيد
+      </button>
+    </nav>
+
+  </div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
