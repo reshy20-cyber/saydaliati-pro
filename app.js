@@ -1,313 +1,813 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-analytics.js";
-import { getFirestore, doc, setDoc, onSnapshot, runTransaction, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import { getFirestore, doc, collection, getDocs, setDoc, query, orderBy, limit, onSnapshot, runTransaction, enableIndexedDbPersistence } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBBsWY5RkBHoph7EQegUNCbwCjGNCeKF4g",
-  authDomain: "saydaliati-pro.firebaseapp.com",
-  projectId: "saydaliati-pro",
-  storageBucket: "saydaliati-pro.firebasestorage.app",
-  messagingSenderId: "376696818740",
-  appId: "1:376696818740:web:752f369fab6980894c4e61",
-  measurementId: "G-TBDGSVB0GN"
+  apiKey: 'AIzaSyBBsWY5RkBHoph7EQegUNCbwCjGNCeKF4g',
+  authDomain: 'saydaliati-pro.firebaseapp.com',
+  projectId: 'saydaliati-pro',
+  storageBucket: 'saydaliati-pro.firebasestorage.app',
+  messagingSenderId: '376696818740',
+  appId: '1:376696818740:web:752f369fab6980894c4e61',
+  measurementId: 'G-TBDGSVB0GN'
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+const ADMIN_UID = 'RFJLGhcDeFStQ53ZcCpyBIZYDdJ3';
 enableIndexedDbPersistence(db).catch(() => {});
 
-let state = {
-  salesTotal: 0,
-  inventory: []
-};
+const DEMO_INVENTORY = [
+  { id: 'demo-1', name: 'بانادول 500 مجم', generic: 'Paracetamol 500 mg', barcode: '6281001001001', price: 2.50, qty: 320, expiryDate: '2028-05-01', color: '#1d4ed8' },
+  { id: 'demo-2', name: 'أموكسيسيلين 500 مجم', generic: 'Amoxicillin 500 mg', barcode: '6281001001002', price: 4.20, qty: 148, expiryDate: '2027-11-15', color: '#0284c7' },
+  { id: 'demo-3', name: 'أوميبرازول 20 مجم', generic: 'Omeprazole 20 mg', barcode: '6281001001003', price: 3.75, qty: 68, expiryDate: '2027-08-20', color: '#7c3aed' },
+  { id: 'demo-4', name: 'لوراتادين 10 مجم', generic: 'Loratadine 10 mg', barcode: '6281001001004', price: 3.20, qty: 24, expiryDate: '2026-12-15', color: '#15803d' }
+];
 
+let state = { salesTotal: 1245.50, dailySales: {}, inventory: [...DEMO_INVENTORY] };
 let cart = [];
 let checkoutInProgress = false;
 let activeInventoryFilter = 'all';
-const validStock = i => Number.isSafeInteger(i.qty) && i.qty > 0 && (!i.expiryDate || i.expiryDate >= todayLocal());
-const fefoBatches = (inventory, item) => inventory.filter(i => (item.barcode && i.barcode === item.barcode) || i.id === item.id).filter(validStock).sort((a,b) => (a.expiryDate || '9999-12-31').localeCompare(b.expiryDate || '9999-12-31'));
+let invSearchQuery = '';
+let unsubscribeCloud = null;
+let authenticatedAdmin = false;
+let serverVerified = false;
+let lastVerifiedFinancialReport = null;
 
-function todayLocal() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+const DRAFT_KEY = 'saydaliati_pos_draft_v1';
+let draftRestored = false;
+
+const todayLocal = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+const escapeHtml = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const validStock = i => i && typeof i === 'object' && Number.isSafeInteger(Number(i.qty)) && Number(i.qty) > 0 && typeof i.expiryDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(i.expiryDate) && i.expiryDate >= todayLocal() && Number.isFinite(Number(i.price)) && Number(i.price) >= 0;
+const fefoBatches = (inv, item) => inv.filter(i => (item.barcode && i.barcode === item.barcode) || i.id === item.id).filter(validStock).sort((a, b) => (a.expiryDate || '9999-12-31').localeCompare(b.expiryDate || '9999-12-31'));
+
+function saveCartDraft() {
+  try {
+    if (!authenticatedAdmin) return;
+    const lines = cart.filter(c => Number.isSafeInteger(c.quantity) && c.quantity > 0).map(c => ({ id: String(c.id), quantity: c.quantity }));
+    if (lines.length) localStorage.setItem(DRAFT_KEY, JSON.stringify({ version: 1, lines }));
+    else localStorage.removeItem(DRAFT_KEY);
+  } catch (e) { console.warn('تعذر حفظ مسودة السلة', e); }
+}
+
+function restoreCartDraft() {
+  if (draftRestored || !authenticatedAdmin || !Array.isArray(state.inventory) || !state.inventory.length) return;
+  draftRestored = true;
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return;
+    const draft = JSON.parse(raw);
+    if (draft.version !== 1 || !Array.isArray(draft.lines) || draft.lines.length > 200) throw Error('مسودة غير صالحة');
+    const restored = [];
+    const seen = new Set();
+    for (const line of draft.lines) {
+      if (!line || typeof line.id !== 'string' || seen.has(line.id) || !Number.isSafeInteger(line.quantity) || line.quantity <= 0) continue;
+      seen.add(line.id);
+      const item = state.inventory.find(i => i.id === line.id);
+      if (item && validStock(item) && Number(item.qty) >= line.quantity) restored.push({ ...item, quantity: line.quantity });
+    }
+    cart = restored;
+    saveCartDraft();
+  } catch (e) { localStorage.removeItem(DRAFT_KEY); }
+}
+
+function requireAdmin() {
+  if (!authenticatedAdmin || !auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    alert('أنت الآن في وضع المعاينة المحلية. سجّل دخول المدير من القائمة العلوية أو الإعدادات للاتصال بقاعدة البيانات.');
+    return false;
+  }
+  return true;
+}
+
+function requireOnlineWrite() {
+  if (!navigator.onLine || !serverVerified) {
+    alert('لا يمكن إجراء معاملات سحابية حتى يتم تأكيد الاتصال المباشر بقاعدة البيانات.');
+    return false;
+  }
+  return true;
+}
+
+function syncStatus(message, connected = false) {
+  let e = document.getElementById('saydaliati-sync-status');
+  if (!e) {
+    e = document.createElement('div');
+    e.id = 'saydaliati-sync-status';
+    e.style.cssText = 'position:fixed;bottom:68px;left:12px;right:12px;z-index:35;text-align:center;pointer-events:none;font-size:10px;font-weight:800;color:#064e36;background:rgba(255,255,255,0.9);padding:3px 10px;border-radius:99px;max-width:340px;margin:auto;box-shadow:0 2px 6px rgba(0,0,0,0.08)';
+    document.body.append(e);
+  }
+  e.textContent = message;
+  const dot = document.getElementById('cloud-dot');
+  if (dot) dot.className = `absolute top-2 right-2 w-2.5 h-2.5 rounded-full border border-emerald-950 ${connected ? 'bg-emerald-400' : 'bg-amber-400'}`;
+}
 
 export function initCloudSync() {
-  const docRef = doc(db, "pharmacy", "main_branch");
-  onSnapshot(docRef, (docSnap) => {
-    if (docSnap.exists()) {
-      state = { salesTotal: 0, inventory: [], ...docSnap.data() };
-      updateUI();
-    } else {
-      setDoc(docRef, { salesTotal: 0, inventory: [] }).catch(err => console.error("Firestore initialization failed", err));
-    }
-  }, (error) => { console.error("Firestore sync failed", error); alert("تعذر الاتصال بقاعدة البيانات. تحقق من الصلاحيات والإنترنت."); });
+  if (!authenticatedAdmin || !auth.currentUser || auth.currentUser.uid !== ADMIN_UID) return;
+  if (unsubscribeCloud) unsubscribeCloud();
+  serverVerified = false;
+  unsubscribeCloud = onSnapshot(doc(db, 'pharmacy', 'main_branch'), { includeMetadataChanges: true }, snapshot => {
+    if (!snapshot.exists()) { serverVerified = false; syncStatus('مستند الصيدلية غير موجود في السحابة'); return; }
+    serverVerified = !snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites;
+    const remote = snapshot.data();
+    if (!remote || !Array.isArray(remote.inventory)) { serverVerified = false; syncStatus('بيانات المخزون غير صالحة'); return; }
+    state = { salesTotal: 0, inventory: [], ...remote };
+    restoreCartDraft();
+    cart = cart.filter(c => state.inventory.some(i => i.id === c.id && validStock(i) && Number(i.qty) >= c.quantity));
+    saveCartDraft();
+    saveLocalSnapshot();
+    updateUI();
+    syncStatus(snapshot.metadata.fromCache ? 'بيانات محفوظة محلياً — بانتظار الاتصال' : 'متصل بـ Firebase السحابي ✓', serverVerified);
+  }, error => {
+    serverVerified = false;
+    syncStatus('تعذرت المزامنة: ' + (error.code || 'خطأ'));
+  });
 }
+
+function showAdminLogin() {
+  document.getElementById('saydaliati-auth-dialog')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'saydaliati-auth-dialog';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:#001b15b8;display:grid;place-items:center;padding:18px;direction:rtl';
+  const panel = document.createElement('div');
+  panel.style.cssText = 'background:white;width:min(100%,410px);padding:24px;border-radius:22px;display:grid;gap:12px;font-family:inherit;box-shadow:0 20px 40px rgba(0,0,0,0.3)';
+  const heading = document.createElement('h2');
+  heading.textContent = 'إعدادات اتصال المدير (Firebase)';
+  heading.style.cssText = 'font-size:19px;font-weight:900;color:#004634';
+  panel.append(heading);
+
+  if (auth.currentUser && authenticatedAdmin) {
+    const info = document.createElement('p');
+    info.textContent = 'متصل بحساب المدير: ' + (auth.currentUser.email || '');
+    info.style.cssText = 'font-size:13px;font-weight:700;color:#065f46';
+    panel.append(info);
+    const logout = document.createElement('button');
+    logout.textContent = 'تسجيل الخروج';
+    logout.style.cssText = 'background:#991b1b;color:white;padding:12px;border-radius:12px;font-weight:800';
+    logout.onclick = async () => { await signOut(auth); overlay.remove(); };
+    panel.append(logout);
+  } else {
+    const sub = document.createElement('p');
+    sub.textContent = 'سجّل الدخول بحساب المدير لمزامنة المخزون والفواتير الحقيقية مع خادم Firebase.';
+    sub.style.cssText = 'font-size:12px;color:#475569';
+    const email = document.createElement('input');
+    email.type = 'email'; email.placeholder = 'بريد المدير'; email.autocomplete = 'username';
+    const password = document.createElement('input');
+    password.type = 'password'; password.placeholder = 'كلمة المرور'; password.autocomplete = 'current-password';
+    for (const input of [email, password]) input.style.cssText = 'padding:12px;border:1px solid #cbd5e1;border-radius:12px;color:#111;width:100%;font-size:13px';
+    const status = document.createElement('p');
+    status.style.cssText = 'color:#b91c1c;font-size:12px;font-weight:700';
+    const login = document.createElement('button');
+    login.textContent = 'تسجيل الدخول والاتصال بالسحابة';
+    login.style.cssText = 'padding:12px;background:#006b3d;color:white;border-radius:12px;font-weight:800';
+    login.onclick = async () => {
+      login.disabled = true; status.textContent = '';
+      try {
+        const result = await signInWithEmailAndPassword(auth, email.value.trim(), password.value);
+        if (result.user.uid !== ADMIN_UID) { await signOut(auth); throw Error('هذا الحساب غير مخوّل كمدير'); }
+        overlay.remove();
+      } catch (e) { status.textContent = 'تعذر الدخول: ' + (e.code || e.message); }
+      finally { login.disabled = false; }
+    };
+    panel.append(sub, email, password, login, status);
+  }
+  const close = document.createElement('button');
+  close.textContent = 'إغلاق';
+  close.style.cssText = 'padding:10px;border:1px solid #cbd5e1;border-radius:12px;font-weight:700';
+  close.onclick = () => overlay.remove();
+  const permBtn = document.createElement('button'); permBtn.textContent = '📷💾 فحص وتفعيل صلاحيات الكاميرا والتخزين'; permBtn.style.cssText = 'padding:11px;background:#0f766e;color:white;border-radius:12px;font-weight:800;font-size:12px'; permBtn.onclick = () => window.requestCameraAndStoragePermissions(); panel.append(permBtn, close);
+  overlay.append(panel);
+  document.body.append(overlay);
+}
+window.showAdminLogin = showAdminLogin;
+
+onAuthStateChanged(auth, user => {
+  authenticatedAdmin = !!user && user.uid === ADMIN_UID;
+  serverVerified = false;
+  if (unsubscribeCloud) { unsubscribeCloud(); unsubscribeCloud = null; }
+  if (authenticatedAdmin) {
+    syncStatus('جارٍ الاتصال بـ Firebase…', false);
+    initCloudSync();
+  } else {
+    lastVerifiedFinancialReport = null;
+    state = { salesTotal: 1245.50, dailySales: { [todayLocal()]: 1245.50 }, inventory: [...DEMO_INVENTORY] };
+    cart = [
+      { ...DEMO_INVENTORY[0], quantity: 1 },
+      { ...DEMO_INVENTORY[2], quantity: 2 },
+      { ...DEMO_INVENTORY[3], quantity: 1 }
+    ];
+    draftRestored = false;
+    saveLocalSnapshot();
+    updateUI();
+    syncStatus('وضع المعاينة — سجّل دخول المدير للمزامنة السحابية', false);
+    if (user && user.uid !== ADMIN_UID) signOut(auth).catch(console.error);
+  }
+});
 
 function updateUI() {
-  const sales = Number(state.salesTotal) || 0;
-  const dashSales = document.getElementById('dash-sales');
-  if (dashSales) dashSales.innerText = `£${sales.toFixed(2)}`;
-  
-  const dashItems = document.getElementById('dash-items-count');
-  if (dashItems) dashItems.innerText = String((state.inventory || []).length);
-
-  const lowStock = (state.inventory || []).filter(i => Number.isFinite(i.qty) && i.qty < 50).length;
-  const dashLow = document.getElementById('dash-low-stock');
-  if (dashLow) dashLow.innerText = `${lowStock} صنفاً`;
-
-  const nearExpiry = state.inventory.filter(i => {
-    if (!i.expiryDate) return false;
-    const diff = new Date(i.expiryDate + "T23:59:59") - new Date();
-    return diff > 0 && diff < (90 * 24 * 60 * 60 * 1000);
-  }).length;
-  const dashNear = document.getElementById('dash-near-expiry');
-  if (dashNear) dashNear.innerText = `${nearExpiry} صنفاً`;
-
+  const sales = authenticatedAdmin ? (Number(state.dailySales?.[todayLocal()]) || 0) : 1245.50;
+  const set = (id, value) => { const el = document.getElementById(id); if (el) el.innerText = value; };
+  set('dash-sales', `£${sales.toFixed(2)}`);
+  set('dash-items-count', authenticatedAdmin ? String(state.inventory.length) : '2,860');
+  set('dash-low-stock', authenticatedAdmin ? `${state.inventory.filter(i => Number(i.qty) < 50).length} صنفاً` : '23 صنفاً');
+  set('dash-near-expiry', authenticatedAdmin ? `${state.inventory.filter(i => i.expiryDate && new Date(i.expiryDate + 'T23:59:59') - new Date() > 0 && new Date(i.expiryDate + 'T23:59:59') - new Date() < 90 * 86400000).length} صنفاً` : '18 صنفاً');
   renderInventoryList(state.inventory, activeInventoryFilter);
   renderCart();
+  if (window.lucide) window.lucide.createIcons();
 }
 
-const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 function renderInventoryList(items, filter = 'all') {
   const container = document.getElementById('inventory-cards-container');
   if (!container) return;
-
-  let filtered = items;
-  if (filter === 'near_expiry') {
-    filtered = items.filter(i => {
-      if (!i.expiryDate) return false;
-      const diff = new Date(i.expiryDate + "T23:59:59") - new Date();
-      return diff >= 0 && diff < 90 * 24 * 60 * 60 * 1000;
-    });
-  } else if (filter === 'low_stock') {
-    filtered = items.filter(i => i.qty < 50);
-  }
+  const q = invSearchQuery.trim().toLowerCase();
+  const filtered = items.filter(i => {
+    const matchFilter = filter === 'near_expiry'
+      ? (i.expiryDate && new Date(i.expiryDate + 'T23:59:59') - new Date() >= 0 && new Date(i.expiryDate + 'T23:59:59') - new Date() < 90 * 86400000)
+      : filter === 'low_stock' ? Number(i.qty) < 50 : true;
+    const matchText = !q || String(i.name || '').toLowerCase().includes(q) || String(i.generic || '').toLowerCase().includes(q) || String(i.barcode || '').includes(q);
+    return matchFilter && matchText;
+  });
 
   container.innerHTML = '';
-  filtered.forEach(item => {
+  for (const item of filtered) {
+    const qtyNum = Number(item.qty) || 0;
+    const isLow = qtyNum < 50;
+    const isNear = item.expiryDate && (new Date(item.expiryDate + 'T23:59:59') - new Date() < 90 * 86400000);
+    const boxColor = item.color || (isLow ? '#15803d' : '#1d4ed8');
     const card = document.createElement('div');
-    card.className = "bg-white p-3.5 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center";
+    card.className = 'bg-white p-3 rounded-2xl shadow-sm border border-slate-200 flex justify-between items-center';
     card.innerHTML = `
-      <div class="flex items-center gap-3">
-        <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-xs font-bold text-blue-500 shadow-inner">💊</div>
+      <div class="flex items-center gap-2.5">
+        <div class="w-12 h-11 rounded-xl flex flex-col justify-center px-1.5 text-white font-bold shadow-sm shrink-0" style="background:linear-gradient(135deg, ${boxColor}, #0f172a)">
+          <span class="text-[8px] truncate opacity-90">${escapeHtml((item.generic || item.name).split(' ')[0])}</span>
+          <span class="text-[7px] bg-white/25 rounded px-1 mt-0.5 w-fit">Rx</span>
+        </div>
         <div class="space-y-0.5">
-          <h4 class="font-extrabold text-slate-800 text-sm">${escapeHtml(item.name)}</h4>
-          <p class="text-[11px] text-slate-400">${escapeHtml(item.generic)}</p>
-          <div class="text-emerald-600 font-extrabold text-xs">£${item.price.toFixed(2)}</div>
-          ${item.qty <= 24 ? `<div class="text-[10px] text-red-500 font-bold flex items-center gap-1">📅 تنتهي: ${escapeHtml(item.expiryDate)}</div>` : ''}
+          <h4 class="font-black text-slate-900 text-sm">${escapeHtml(item.name)}</h4>
+          <p class="text-[11px] text-slate-500 font-semibold">${escapeHtml(item.generic || '')}</p>
+          <div class="text-emerald-900 font-black text-xs">£${Number(item.price || 0).toFixed(2)}</div>
+          ${isNear && item.expiryDate ? `<div class="text-[10px] text-red-600 font-extrabold">📅 تنتهي: ${escapeHtml(item.expiryDate)}</div>` : ''}
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <div class="bg-emerald-50 text-emerald-700 font-extrabold px-3 py-1.5 rounded-xl text-xs text-center">
-          <div class="text-[9px] text-slate-400 font-normal">المخزون</div>
-          <div>${item.qty}</div>
+        <div class="${isLow ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'} border font-black px-2.5 py-1.5 rounded-xl text-xs text-center min-w-[54px]">
+          <div class="text-[9px] text-slate-500 font-bold">المخزون</div>
+          <div>${qtyNum}</div>
         </div>
-        <button data-add-id="${escapeHtml(item.id)}" class="bg-emerald-600 hover:bg-emerald-700 text-white w-9 h-9 rounded-xl font-bold flex items-center justify-center shadow transition text-sm">+</button>
-      </div>
-    `;
-    container.appendChild(card);
-  });
+        <button data-add-id="${escapeHtml(item.id)}" class="bg-emerald-800 hover:bg-emerald-900 text-white w-8 h-8 rounded-xl font-black flex items-center justify-center shadow text-base">+</button>
+      </div>`;
+    container.append(card);
+  }
 }
 
-window.filterInventory = function(type, btn) {
-  document.querySelectorAll('.inv-filter-btn').forEach(b => {
-    b.className = "inv-filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-white text-slate-600 shadow-sm border border-slate-100";
-  });
-  btn.className = "inv-filter-btn px-4 py-1.5 rounded-full text-xs font-bold bg-emerald-600 text-white shadow";
+window.filterInventory = (type, btn) => {
+  document.querySelectorAll('.inv-filter-btn').forEach(b => b.className = 'inv-filter-btn px-4 py-2 rounded-full bg-white text-slate-700 border border-slate-200');
+  btn.className = 'inv-filter-btn px-4 py-2 rounded-full bg-emerald-800 text-white shadow';
   activeInventoryFilter = type;
   renderInventoryList(state.inventory, type);
 };
 
-window.switchScreen = function(screenId) {
-  document.querySelectorAll('.screen-view').forEach(el => el.classList.add('hidden'));
-  const target = document.getElementById(screenId);
-  if (target) target.classList.remove('hidden');
-
-  document.querySelectorAll('.nav-btn').forEach(b => b.className = "nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-white transition");
-  if (screenId === 'screen-home') document.getElementById('nav-home').className = "nav-btn flex flex-col items-center gap-1 text-amber-400 font-bold transition";
-  if (screenId === 'screen-pos') document.getElementById('nav-pos').className = "nav-btn flex flex-col items-center gap-1 text-amber-400 font-bold transition";
-  if (screenId === 'screen-inventory') document.getElementById('nav-inv').className = "nav-btn flex flex-col items-center gap-1 text-amber-400 font-bold transition";
+window.filterInventoryText = val => {
+  invSearchQuery = val;
+  renderInventoryList(state.inventory, activeInventoryFilter);
 };
 
-window.addToCart = function(id) {
+window.switchScreen = screenId => {
+  document.querySelectorAll('.screen-view').forEach(e => e.classList.add('hidden'));
+  document.getElementById(screenId)?.classList.remove('hidden');
+  document.querySelectorAll('.nav-btn').forEach(b => b.className = 'nav-btn flex flex-col items-center gap-1 text-white/85');
+  const id = ({ 'screen-home': 'nav-home', 'screen-pos': 'nav-pos', 'screen-inventory': 'nav-inv' })[screenId];
+  if (id) document.getElementById(id).className = 'nav-btn flex flex-col items-center gap-1 text-amber-300';
+  if (window.lucide) window.lucide.createIcons();
+};
+
+window.searchPosQuick = val => {
+  const box = document.getElementById('pos-quick-results');
+  if (!box) return;
+  const q = val.trim().toLowerCase();
+  if (!q) { box.classList.add('hidden'); return; }
+  const matches = state.inventory.filter(i => String(i.name || '').toLowerCase().includes(q) || String(i.barcode || '').includes(q)).slice(0, 6);
+  if (!matches.length) { box.classList.add('hidden'); return; }
+  box.innerHTML = matches.map(m => `
+    <button onclick="window.addToCart('${escapeHtml(m.id)}');document.getElementById('pos-search').value='';document.getElementById('pos-quick-results').classList.add('hidden')" class="w-full text-right px-3.5 py-2.5 border-b border-slate-100 hover:bg-emerald-50 flex justify-between items-center text-xs font-bold">
+      <span>${escapeHtml(m.name)}</span>
+      <span class="text-emerald-800 font-black">£${Number(m.price).toFixed(2)} (${m.qty})</span>
+    </button>
+  `).join('');
+  box.classList.remove('hidden');
+};
+
+window.addToCart = id => {
+  if (checkoutInProgress) return;
   const item = state.inventory.find(i => i.id === id);
   if (!item) return alert('الصنف غير موجود');
-  const batches = fefoBatches(state.inventory, item);
-  const chosen = batches.find(i => (cart.find(c => c.id === i.id)?.quantity || 0) < i.qty);
+  const chosen = authenticatedAdmin
+    ? fefoBatches(state.inventory, item).find(i => (cart.find(c => c.id === i.id)?.quantity || 0) < Number(i.qty))
+    : item;
   if (!chosen) return alert('لا توجد دفعة صالحة ومتاحة للبيع');
-  const exist = cart.find(c => c.id === chosen.id);
-  if (exist) exist.quantity++;
+  const existing = cart.find(c => c.id === chosen.id);
+  if (existing) existing.quantity++;
   else cart.push({ ...chosen, quantity: 1 });
   renderCart();
+  saveCartDraft();
   window.switchScreen('screen-pos');
 };
 
-window.updateCartQty = function(id, delta) {
-  const exist = cart.find(c => c.id === id);
-  const item = state.inventory.find(i => i.id === id);
-  if (!exist) return;
-  const newQty = exist.quantity + delta;
-  if (newQty > 0 && (!item || !validStock(item) || newQty > item.qty)) return alert('الكمية تتجاوز المخزون الصالح والمتوفر!');
-  if (newQty <= 0) {
-    cart = cart.filter(c => c.id !== id);
-  } else {
-    exist.quantity = newQty;
-  }
+window.updateCartQty = (id, delta) => {
+  if (checkoutInProgress) return;
+  const c = cart.find(i => i.id === id);
+  const i = state.inventory.find(i => i.id === id);
+  if (!c) return;
+  const qty = c.quantity + delta;
+  if (qty > 0 && i && qty > Number(i.qty)) return alert('الكمية تتجاوز المخزون المتوفر');
+  if (qty <= 0) cart = cart.filter(x => x.id !== id);
+  else c.quantity = qty;
   renderCart();
+  saveCartDraft();
 };
 
-window.removeFromCart = function(id) {
-  cart = cart.filter(c => c.id !== id);
+window.removeFromCart = id => {
+  if (checkoutInProgress) return;
+  cart = cart.filter(i => i.id !== id);
   renderCart();
+  saveCartDraft();
 };
 
-function renderCart() {
+window.renderCart = function renderCart() {
   const container = document.getElementById('cart-items-container');
-  const subTotalEl = document.getElementById('cart-subtotal');
-  const finalTotalEl = document.getElementById('cart-final-total');
   if (!container) return;
+  const subtotal = cart.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+  const discount = Math.max(0, Number(document.getElementById('pos-discount')?.value) || 0);
+  const finalTotal = Math.max(0, subtotal - discount);
 
-  const subtotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
-  if (subTotalEl) subTotalEl.innerText = `£${subtotal.toFixed(2)}`;
-  if (finalTotalEl) finalTotalEl.innerText = `£${subtotal.toFixed(2)}`;
+  const subEl = document.getElementById('cart-subtotal');
+  const finEl = document.getElementById('cart-final-total');
+  if (subEl) subEl.innerText = `£${subtotal.toFixed(2)}`;
+  if (finEl) finEl.innerText = `£${finalTotal.toFixed(2)}`;
 
-  if (cart.length === 0) {
-    container.innerHTML = `<p class="text-slate-400 text-sm text-center py-12">السلة فارغة حالياً... اختر أدوية من قسم المخزون أو المبيعات</p>`;
+  if (!cart.length) {
+    container.innerHTML = '<p class="text-slate-400 text-xs font-bold text-center py-10">السلة فارغة حالياً... اختر أدوية من قسم المخزون أو ابحث بالأعلى</p>';
+    return;
+  }
+  container.innerHTML = '';
+  for (const i of cart) {
+    const boxColor = i.color || '#1d4ed8';
+    const div = document.createElement('div');
+    div.className = 'flex justify-between items-center bg-slate-50/70 p-2.5 rounded-2xl border border-slate-200/80';
+    div.innerHTML = `
+      <div class="flex items-center gap-2.5">
+        <div class="w-11 h-10 rounded-xl flex flex-col justify-center px-1.5 text-white font-bold shrink-0" style="background:linear-gradient(135deg, ${boxColor}, #0f172a)">
+          <span class="text-[8px] truncate">${escapeHtml((i.generic || i.name).split(' ')[0])}</span>
+        </div>
+        <div>
+          <h4 class="font-black text-slate-900 text-xs">${escapeHtml(i.name)}</h4>
+          <span class="text-emerald-900 font-black text-xs">£${Number(i.price).toFixed(2)}</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <div class="flex items-center gap-1.5 bg-white px-2 py-1 rounded-xl border border-slate-200 shadow-sm">
+          <button data-qty-id="${escapeHtml(i.id)}" data-delta="1" class="w-5 h-5 rounded-md bg-emerald-50 text-emerald-900 font-black text-xs">+</button>
+          <span class="font-black text-xs w-4 text-center">${i.quantity}</span>
+          <button data-qty-id="${escapeHtml(i.id)}" data-delta="-1" class="w-5 h-5 rounded-md bg-slate-100 text-slate-700 font-black text-xs">-</button>
+        </div>
+        <button data-remove-id="${escapeHtml(i.id)}" class="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+      </div>`;
+    container.append(div);
+  }
+  if (window.lucide) window.lucide.createIcons();
+};
+
+// Electronic Invoice Modal with QR Code + PDF Print + WhatsApp Share
+function showElectronicInvoice(invoice) {
+  document.getElementById('saydaliati-invoice-modal')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'saydaliati-invoice-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:10002;background:rgba(0,27,21,0.82);display:grid;place-items:center;padding:14px;direction:rtl';
+
+  const card = document.createElement('div');
+  card.id = 'invoice-print-area';
+  card.style.cssText = 'background:#fff;width:min(100%,390px);border-radius:24px;padding:20px;box-shadow:0 24px 48px rgba(0,0,0,0.35);max-height:90vh;overflow-y:auto';
+
+  const rowsHtml = invoice.items.map(it => `
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px dashed #e2e8f0">
+      <div><strong>${escapeHtml(it.name)}</strong><br><span style="color:#64748b;font-size:10px">${it.quantity} × £${Number(it.unitPrice).toFixed(2)}</span></div>
+      <strong style="color:#064e3b">£${(it.quantity * Number(it.unitPrice)).toFixed(2)}</strong>
+    </div>
+  `).join('');
+
+  card.innerHTML = `
+    <div style="text-align:center;border-bottom:2px solid #004634;padding-bottom:12px;margin-bottom:12px">
+      <div style="font-size:22px;font-weight:900;color:#004634">صيدليتي | SAYDALIATI</div>
+      <div style="font-size:11px;color:#475569;font-weight:700">فاتورة ضريبية مبسطة — الصيدلية الرئيسية</div>
+      <div style="font-size:10px;color:#64748b;margin-top:4px">${escapeHtml(invoice.id)}</div>
+      <div style="font-size:10px;color:#64748b">${new Date(invoice.createdAt).toLocaleString('ar-EG')}</div>
+    </div>
+    <div style="margin-bottom:12px">${rowsHtml}</div>
+    <div style="background:#f8fafc;padding:10px;border-radius:12px;font-size:12px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>الإجمالي الفرعي:</span><strong>£${Number(invoice.subtotal || invoice.total).toFixed(2)}</strong></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>الخصم:</span><strong>£${Number(invoice.discount || 0).toFixed(2)}</strong></div>
+      <div style="display:flex;justify-content:space-between;font-size:15px;color:#004634;border-top:1px solid #cbd5e1;padding-top:6px"><strong>الإجمالي النهائي:</strong><strong>£${Number(invoice.total).toFixed(2)}</strong></div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:14px">
+      <div id="invoice-qr-box" style="padding:8px;background:#fff;border:1px solid #e2e8f0;border-radius:12px"></div>
+      <span style="font-size:10px;color:#64748b;font-weight:700">رمز التحقق الإلكتروني للفاتورة (QR)</span>
+    </div>
+    <div class="no-print" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button onclick="window.print()" style="background:#00533c;color:white;padding:11px;border-radius:12px;font-weight:800;font-size:12px">🖨️ حفظ PDF / طباعة</button>
+      <button id="share-wa-btn" style="background:#16a34a;color:white;padding:11px;border-radius:12px;font-weight:800;font-size:12px">📲 مشاركة واتساب</button>
+      <button onclick="document.getElementById('saydaliati-invoice-modal').remove()" style="grid-column:span 2;padding:10px;border:1px solid #cbd5e1;border-radius:12px;font-weight:800;font-size:12px">إغلاق والعودة</button>
+    </div>
+  `;
+
+  overlay.append(card);
+  document.body.append(overlay);
+
+  if (window.QRCode) {
+    new window.QRCode(document.getElementById('invoice-qr-box'), {
+      text: `SAYDALIATI|${invoice.id}|TOTAL:${Number(invoice.total).toFixed(2)}|DATE:${invoice.createdAt}`,
+      width: 110, height: 110, colorDark: '#003a2c', colorLight: '#ffffff'
+    });
+  }
+
+  document.getElementById('share-wa-btn').onclick = () => {
+    const lines = invoice.items.map(i => `• ${i.name} (${i.quantity} × £${Number(i.unitPrice).toFixed(2)})`).join('\n');
+    const text = `*صيدليتي SAYDALIATI*\nفاتورة رقم: ${invoice.id}\n${lines}\n*الإجمالي النهائي: £${Number(invoice.total).toFixed(2)}*`;
+    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+  };
+}
+
+window.checkout = async () => {
+  if (checkoutInProgress) return;
+  if (!cart.length) return alert('السلة فارغة!');
+
+  const discount = Math.max(0, Number(document.getElementById('pos-discount')?.value) || 0);
+
+  // Demo mode local checkout if not logged in to Firebase yet
+  if (!authenticatedAdmin) {
+    const subtotal = cart.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+    const total = Math.max(0, Math.round((subtotal - discount) * 100) / 100);
+    const inv = {
+      id: 'INV-DEMO-' + Math.floor(100000 + Math.random() * 900000),
+      items: cart.map(c => ({ id: c.id, name: c.name, quantity: c.quantity, unitPrice: Number(c.price) })),
+      subtotal, discount, total, createdAt: new Date().toISOString()
+    };
+    for (const c of cart) {
+      const target = state.inventory.find(i => i.id === c.id);
+      if (target) target.qty = Math.max(0, Number(target.qty) - c.quantity);
+    }
+    cart = [];
+    updateUI();
+    showElectronicInvoice(inv);
     return;
   }
 
-  container.innerHTML = '';
-  cart.forEach(i => {
-    const div = document.createElement('div');
-    div.className = "flex justify-between items-center bg-white p-3.5 rounded-2xl shadow-sm border border-slate-100";
-    div.innerHTML = `
-      <div class="flex items-center gap-3">
-        <button data-remove-id="${escapeHtml(i.id)}" class="text-red-400 hover:text-red-600 text-base">🗑️</button>
-        <div>
-          <h4 class="font-extrabold text-slate-800 text-sm">${escapeHtml(i.name)}</h4>
-          <span class="text-emerald-600 font-extrabold text-xs">£${i.price.toFixed(2)}</span>
-        </div>
-      </div>
-      <div class="flex items-center gap-2.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-100">
-        <button data-qty-id="${escapeHtml(i.id)}" data-delta="-1" class="w-6 h-6 rounded-lg bg-white shadow-sm font-bold text-slate-700 flex items-center justify-center text-xs">-</button>
-        <span class="font-extrabold text-sm w-5 text-center text-slate-800">${i.quantity}</span>
-        <button data-qty-id="${escapeHtml(i.id)}" data-delta="1" class="w-6 h-6 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-xs shadow-sm">+</button>
-      </div>
-    `;
-    container.appendChild(div);
-  });
-}
-
-window.checkout = async function() {
-  if (checkoutInProgress) return;
-  if (cart.length === 0) return alert('السلة فارغة!');
+  if (!requireOnlineWrite()) return;
   checkoutInProgress = true;
   const saleItems = cart.map(c => ({ id: c.id, quantity: c.quantity }));
-  const invoiceId = 'INV-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+  const invoiceId = 'INV-' + crypto.randomUUID();
+  const saleDay = todayLocal();
   const docRef = doc(db, 'pharmacy', 'main_branch');
   const invoiceRef = doc(db, 'invoices', invoiceId);
+
   try {
-    await runTransaction(db, async (t) => {
+    let createdInvoice = null;
+    await runTransaction(db, async t => {
+      const prior = await t.get(invoiceRef);
+      if (prior.exists()) throw Error('الفاتورة مسجلة مسبقاً');
       const snap = await t.get(docRef);
-      if (!snap.exists()) throw new Error('لا توجد بيانات مخزون محفوظة');
+      if (!snap.exists()) throw Error('لا توجد بيانات مخزون محفوظة');
       const data = snap.data();
-      const inv = (data.inventory || []).map(i => ({ ...i }));
-      let total = 0;
+      if (!Array.isArray(data.inventory)) throw Error('هيكل بيانات المخزون غير صالح');
+      const inv = data.inventory.map(i => ({ ...i }));
+      let subtotal = 0;
       const invoiceItems = [];
       for (const c of saleItems) {
-        if (!Number.isSafeInteger(c.quantity) || c.quantity <= 0) throw new Error('كمية غير صالحة');
+        if (!Number.isSafeInteger(c.quantity) || c.quantity <= 0) throw Error('كمية غير صالحة');
         const item = inv.find(i => i.id === c.id);
-        if (!item) throw new Error('الصنف غير موجود في المخزون');
-        if (item.expiryDate && item.expiryDate < todayLocal()) throw new Error('لا يمكن بيع دواء منتهي الصلاحية');
-        if (!Number.isSafeInteger(item.qty) || item.qty < c.quantity) throw new Error('الكمية المتاحة غير كافية: ' + item.name);
-        if (!Number.isFinite(item.price) || item.price < 0) throw new Error('سعر غير صالح');
-        item.qty -= c.quantity;
-        total += item.price * c.quantity;
-        invoiceItems.push({ id: item.id, name: item.name, barcode: item.barcode || '', expiryDate: item.expiryDate || '', quantity: c.quantity, unitPrice: item.price });
+        if (!item) throw Error('الصنف غير موجود');
+        if (!validStock(item)) throw Error('الدفعة غير صالحة أو منتهية الصلاحية');
+        if (!Number.isSafeInteger(Number(item.qty)) || Number(item.qty) < c.quantity) throw Error('الكمية غير كافية: ' + item.name);
+        item.qty = Number(item.qty) - c.quantity;
+        subtotal += Number(item.price) * c.quantity;
+        invoiceItems.push({ id: item.id, name: item.name, barcode: item.barcode || '', expiryDate: item.expiryDate || '', quantity: c.quantity, unitPrice: Number(item.price) });
       }
-      total = Math.round(total * 100) / 100;
-      t.update(docRef, { inventory: inv, salesTotal: Math.round(((data.salesTotal || 0) + total) * 100) / 100 });
-      t.set(invoiceRef, { id: invoiceId, items: invoiceItems, total, createdAt: new Date().toISOString(), branchId: 'main_branch' });
+      subtotal = Math.round(subtotal * 100) / 100;
+      const total = Math.max(0, Math.round((subtotal - discount) * 100) / 100);
+      const dailySales = { ...(data.dailySales || {}) };
+      dailySales[saleDay] = Math.round(((Number(dailySales[saleDay]) || 0) + total) * 100) / 100;
+      t.update(docRef, { inventory: inv, salesTotal: Math.round(((Number(data.salesTotal) || 0) + total) * 100) / 100, dailySales });
+      createdInvoice = { id: invoiceId, items: invoiceItems, subtotal, discount, total, createdAt: new Date().toISOString(), branchId: 'main_branch' };
+      t.set(invoiceRef, createdInvoice);
     });
     cart = [];
+    saveCartDraft();
     renderCart();
-    window.switchScreen('screen-home');
-    alert('تمت عملية البيع وحفظ الفاتورة: ' + invoiceId);
+    showElectronicInvoice(createdInvoice);
   } catch (e) {
     alert('لم تُحفظ عملية البيع: ' + (e.message || 'خطأ في الاتصال'));
-  } finally { checkoutInProgress = false; }
+  } finally {
+    checkoutInProgress = false;
+  }
 };
 
-window.addNewProduct = async function(e) {
+window.addNewProduct = async e => {
   e.preventDefault();
   const name = document.getElementById('new-name').value.trim();
   const generic = document.getElementById('new-generic').value.trim();
   const barcode = document.getElementById('new-barcode').value.trim();
   const expiryDate = document.getElementById('new-expiry').value;
-  const price = parseFloat(document.getElementById('new-price').value);
-  const qtyRaw = document.getElementById('new-qty').value.trim();
-  const qty = Number(qtyRaw);
+  const price = Number(document.getElementById('new-price').value);
+  const qty = Number(document.getElementById('new-qty').value);
 
   if (expiryDate && expiryDate < todayLocal()) return alert('لا يمكن إضافة دفعة منتهية الصلاحية');
-  if (!name || !Number.isFinite(price) || price < 0 || !qtyRaw || !Number.isSafeInteger(qty) || qty < 0 || !expiryDate) return alert('يرجى إدخال بيانات صحيحة');
-  const docRef = doc(db, "pharmacy", "main_branch");
-  try { await runTransaction(db, async (t) => {
-    const snap = await t.get(docRef);
-    if (!snap.exists()) throw new Error('لم يتم تهيئة المخزون');
-    let inv = snap.data().inventory || [];
-    inv.push({ id: 'item_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7), name, generic, barcode, expiryDate, price, qty });
-    t.update(docRef, { inventory: inv });
-  }); } catch (e) { alert('تعذر حفظ الدواء: ' + (e.message || 'خطأ')); return; }
-  alert('تمت إضافة الدواء بنجاح للمخزون والسحابة! 📥');
-  document.getElementById('add-product-form').reset();
-  window.switchScreen('screen-inventory');
+  if (!name || !Number.isFinite(price) || price < 0 || !Number.isSafeInteger(qty) || qty < 0 || !expiryDate) return alert('يرجى إدخال بيانات صحيحة');
+
+  if (!authenticatedAdmin) {
+    state.inventory.unshift({ id: 'demo-' + Date.now(), name, generic, barcode, expiryDate, price, qty, color: '#00683e' });
+    updateUI();
+    document.getElementById('add-product-form').reset();
+    window.switchScreen('screen-inventory');
+    return;
+  }
+
+  if (!requireOnlineWrite()) return;
+  try {
+    await runTransaction(db, async t => {
+      const ref = doc(db, 'pharmacy', 'main_branch');
+      const snap = await t.get(ref);
+      if (!snap.exists()) throw Error('لم يتم تهيئة المخزون');
+      const inv = [...snap.data().inventory];
+      inv.push({ id: crypto.randomUUID(), name, generic, barcode, expiryDate, price, qty });
+      t.update(ref, { inventory: inv });
+    });
+    alert('تمت إضافة الدواء إلى السحابة بنجاح');
+    document.getElementById('add-product-form').reset();
+    window.switchScreen('screen-inventory');
+  } catch (e) {
+    alert('تعذر حفظ الدواء: ' + (e.message || 'خطأ'));
+  }
 };
 
-document.addEventListener('DOMContentLoaded', () => initCloudSync());
-
-// مسح الباركود: اضغط مطولاً على حقل الباركود في شاشة إضافة الدواء.
-// لا يُغيّر التصميم الأصلي؛ يظهر مربع الكاميرا مؤقتاً فقط.
-async function scanBarcode() {
+async function scanBarcode(target = 'pos') {
   if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia) {
-    alert('المسح بالكاميرا غير مدعوم في هذا المتصفح. يمكنك إدخال الباركود يدويًا.'); return;
+    const manual = prompt('الكاميرا غير مدعومة في هذا المتصفح. أدخل رقم الباركود يدوياً:');
+    if (manual) handleScannedCode(manual.trim(), target);
+    return;
   }
   let stream, raf;
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;color:white';
-  const video = document.createElement('video'); video.autoplay = true; video.playsInline = true;
-  video.style.cssText = 'width:100%;max-width:420px;border-radius:18px';
-  const close = document.createElement('button'); close.textContent = 'إغلاق الكاميرا';
-  close.style.cssText = 'background:#047857;padding:12px 25px;border-radius:12px';
-  const stop = () => { cancelAnimationFrame(raf); stream?.getTracks().forEach(t=>t.stop()); overlay.remove(); };
-  close.onclick = stop; overlay.append(video, close); document.body.append(overlay);
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#000e;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;color:white';
+  const video = document.createElement('video');
+  video.autoplay = true; video.playsInline = true;
+  video.style.cssText = 'width:100%;max-width:390px;border-radius:18px;border:2px solid #f4c66c';
+  const close = document.createElement('button');
+  close.textContent = 'إغلاق الكاميرا';
+  close.style.cssText = 'background:#006b3d;padding:12px 26px;border-radius:12px;font-weight:800';
+  const stop = () => { cancelAnimationFrame(raf); stream?.getTracks().forEach(t => t.stop()); overlay.remove(); };
+  close.onclick = stop;
+  overlay.append(video, close);
+  document.body.append(overlay);
   try {
-    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
-    video.srcObject = stream; await video.play();
-    const detector = new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code']});
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+    video.srcObject = stream;
+    await video.play();
+    const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'] });
     let busy = false;
     const frame = async () => {
       if (!overlay.isConnected) return;
       if (!busy && video.readyState >= 2) {
         busy = true;
-        try { const found = await detector.detect(video); if (found.length) {
-          document.getElementById('new-barcode').value = found[0].rawValue; stop(); return;
-        }} catch(e) { console.warn('Barcode detection:',e); }
-        finally { busy = false; }
+        try {
+          const found = await detector.detect(video);
+          if (found.length) { handleScannedCode(found[0].rawValue, target); stop(); return; }
+        } finally { busy = false; }
       }
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
-  } catch(e) { stop(); alert('تعذر تشغيل الكاميرا. تحقق من الأذونات واتصال HTTPS.'); }
+  } catch (e) { stop(); alert('تعذر تشغيل الكاميرا'); }
+}
+
+function handleScannedCode(code, target) {
+  if (target === 'new') {
+    const el = document.getElementById('new-barcode');
+    if (el) el.value = code;
+    return;
+  }
+  const found = state.inventory.find(i => i.barcode === code);
+  if (found) {
+    if (target === 'pos') window.addToCart(found.id);
+    else { invSearchQuery = code; renderInventoryList(state.inventory, activeInventoryFilter); }
+  } else {
+    alert('لم يتم العثور على دواء بالباركود: ' + code);
+  }
 }
 window.scanBarcode = scanBarcode;
+
+// Administrative Overlays (Invoices, Returns, Reports, Suppliers, Purchases, Employees, Branches, Backup/Restore)
+function adminPanel(title) {
+  document.getElementById('saydaliati-admin-panel')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'saydaliati-admin-panel';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:10001;background:#001b15c9;display:grid;place-items:center;padding:15px;direction:rtl';
+  const panel = document.createElement('section');
+  panel.style.cssText = 'background:#fff;border-radius:20px;padding:18px;width:min(100%,440px);max-height:86vh;overflow:auto;color:#123;display:grid;gap:11px';
+  const header = document.createElement('h2');
+  header.textContent = title;
+  header.style.cssText = 'font-size:19px;font-weight:900;color:#004634';
+  panel.append(header);
+  const close = document.createElement('button');
+  close.textContent = 'إغلاق';
+  close.style.cssText = 'padding:10px;border:1px solid #cbd5e1;border-radius:12px;font-weight:800';
+  close.onclick = () => overlay.remove();
+  const permBtn = document.createElement('button'); permBtn.textContent = '📷💾 فحص وتفعيل صلاحيات الكاميرا والتخزين'; permBtn.style.cssText = 'padding:11px;background:#0f766e;color:white;border-radius:12px;font-weight:800;font-size:12px'; permBtn.onclick = () => window.requestCameraAndStoragePermissions(); panel.append(permBtn, close);
+  overlay.append(panel);
+  document.body.append(overlay);
+  return { panel, close, overlay };
+}
+function adminText(panel, value) { const p = document.createElement('p'); p.textContent = value; p.style.cssText = 'font-size:12.5px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6'; panel.insertBefore(p, panel.lastChild); return p; }
+function adminField(panel, label, type = 'text') { const wrap = document.createElement('label'); wrap.textContent = label; wrap.style.cssText = 'display:grid;gap:4px;font-size:12px;font-weight:800'; const input = document.createElement('input'); input.type = type; input.style.cssText = 'border:1px solid #cbd5e1;border-radius:10px;padding:10px;width:100%;font-weight:600'; wrap.append(input); panel.insertBefore(wrap, panel.lastChild); return input; }
+function adminButton(panel, label, handler) { const b = document.createElement('button'); b.textContent = label; b.style.cssText = 'background:#00533c;color:white;padding:11px;border-radius:12px;font-weight:800;font-size:13px'; b.onclick = handler; panel.insertBefore(b, panel.lastChild); return b; }
+
+async function showInvoices() {
+  if (!requireAdmin() || !requireOnlineWrite()) return;
+  const { panel } = adminPanel('الفواتير الأخيرة');
+  adminButton(panel, 'تسجيل مرتجع مبيعات', showSalesReturns);
+  const msg = adminText(panel, 'جارٍ تحميل الفواتير…');
+  try {
+    const snaps = await getDocs(query(collection(db, 'invoices'), orderBy('createdAt', 'desc'), limit(50)));
+    msg.textContent = snaps.empty ? 'لا توجد فواتير مسجلة' : `آخر ${snaps.size} فاتورة`;
+    snaps.forEach(s => {
+      const d = s.data();
+      const row = adminText(panel, `${d.id || s.id}\n${d.createdAt || ''}\nالإجمالي: £${Number(d.total || 0).toFixed(2)}`);
+      row.style.cssText += ';background:#f8fafc;padding:8px;border-radius:10px;border:1px solid #e2e8f0;cursor:pointer';
+      row.onclick = () => showElectronicInvoice(d);
+    });
+  } catch (e) { msg.textContent = 'تعذر قراءة الفواتير: ' + (e.code || e.message); }
+}
+
+async function showSalesReturns() {
+  if (!requireAdmin() || !requireOnlineWrite()) return;
+  const { panel } = adminPanel('مرتجعات المبيعات');
+  const invoice = adminField(panel, 'رقم فاتورة البيع');
+  const stock = adminField(panel, 'معرف الدفعة من الفاتورة');
+  const quantity = adminField(panel, 'الكمية المرتجعة', 'number'); quantity.min = '1'; quantity.step = '1';
+  const reason = adminField(panel, 'سبب المرتجع');
+  const status = adminText(panel, 'تنبيه: الدواء المرتجع يُسجل في سجل منفصل (الحجر) ولا يعود تلقائياً للمخزون القابل للبيع.');
+  let busy = false;
+  adminButton(panel, 'تسجيل المرتجع', async () => {
+    if (busy || !requireAdmin() || !requireOnlineWrite()) return;
+    const id = invoice.value.trim(), sid = stock.value.trim(), q = Number(quantity.value);
+    if (!id || !sid || !reason.value.trim() || !Number.isSafeInteger(q) || q <= 0) return status.textContent = 'أدخل جميع الحقول بشكل صحيح';
+    const invoiceRef = doc(db, 'invoices', id), returnRef = doc(collection(db, 'sales_returns'));
+    busy = true;
+    try {
+      await runTransaction(db, async tx => {
+        const snap = await tx.get(invoiceRef);
+        if (!snap.exists()) throw Error('الفاتورة غير موجودة');
+        const sale = snap.data();
+        const line = sale.items?.find(i => i.id === sid);
+        if (!line) throw Error('هذه الدفعة غير موجودة في الفاتورة');
+        const original = Number(line.quantity), prior = Number((sale.returnedQty || {})[sid] || 0), price = Number(line.unitPrice);
+        if (prior + q > original) throw Error('الكمية تتجاوز المبيع');
+        const value = Math.round(q * price * 100) / 100;
+        const returnedQty = { ...(sale.returnedQty || {}), [sid]: prior + q };
+        tx.update(invoiceRef, { returnedQty, returnedValue: Math.round((Number(sale.returnedValue || 0) + value) * 100) / 100 });
+        tx.set(returnRef, { invoiceId: id, stockId: sid, productName: String(line.name || ''), quantity: q, refundAmount: value, reason: reason.value.trim(), createdAt: new Date().toISOString(), branchId: 'main_branch', restockStatus: 'quarantined', refundStatus: 'pending' });
+      });
+      status.textContent = 'تم تسجيل المرتجع بنجاح.';
+    } catch (e) { status.textContent = 'فشل تسجيل المرتجع: ' + (e.code || e.message); }
+    finally { busy = false; }
+  });
+}
+
+async function showReports() {
+  if (!requireAdmin()) return;
+  const { panel } = adminPanel('التقارير المالية');
+  const msg = adminText(panel, 'جارٍ فحص السجلات المالية…');
+  if (!navigator.onLine || !serverVerified) {
+    msg.textContent = lastVerifiedFinancialReport || 'اتصل بالخادم لقراءة السجلات المالية المؤكدة.';
+    return;
+  }
+  try {
+    const names = ['invoices', 'purchases', 'sales_returns', 'purchase_returns', 'supplier_payments'];
+    const records = {};
+    for (const name of names) {
+      const snap = await getDocs(collection(db, name));
+      records[name] = snap.docs.filter(d => d.data().branchId === 'main_branch').map(d => d.data());
+    }
+    const sales = records.invoices.reduce((s, r) => s + Number(r.total || 0), 0);
+    const purchasesTotal = records.purchases.reduce((s, r) => s + Number(r.total || 0), 0);
+    const salesReturns = records.sales_returns.reduce((s, r) => s + Number(r.refundAmount || 0), 0);
+    const reportText = `فواتير البيع: ${records.invoices.length}\nإجمالي المبيعات: £${sales.toFixed(2)}\nمرتجعات المبيعات: £${salesReturns.toFixed(2)}\nصافي المبيعات: £${(sales - salesReturns).toFixed(2)}\nفواتير الشراء: ${records.purchases.length}\nقيمة المشتريات: £${purchasesTotal.toFixed(2)}`;
+    lastVerifiedFinancialReport = reportText;
+    msg.textContent = reportText;
+  } catch (e) { msg.textContent = 'تعذر إصدار التقرير: ' + (e.code || e.message); }
+}
+
+async function showSuppliers() {
+  if (!requireAdmin() || !requireOnlineWrite()) return;
+  const { panel } = adminPanel('الموردون');
+  const name = adminField(panel, 'اسم المورد');
+  const phone = adminField(panel, 'رقم التواصل');
+  const msg = adminText(panel, '');
+  adminButton(panel, 'حفظ المورد', async () => {
+    if (!name.value.trim()) return msg.textContent = 'أدخل اسم المورد';
+    try {
+      await setDoc(doc(collection(db, 'suppliers')), { name: name.value.trim(), phone: phone.value.trim(), createdAt: new Date().toISOString(), branchId: 'main_branch' });
+      msg.textContent = 'تم حفظ المورد بنجاح'; name.value = ''; phone.value = '';
+    } catch (e) { msg.textContent = 'فشل الحفظ: ' + e.message; }
+  });
+}
+
+async function showPurchases() {
+  if (!requireAdmin() || !requireOnlineWrite()) return;
+  const { panel } = adminPanel('تسجيل فاتورة شراء');
+  const supplier = adminField(panel, 'اسم المورد');
+  const name = adminField(panel, 'اسم الدواء');
+  const barcode = adminField(panel, 'الباركود');
+  const expiry = adminField(panel, 'تاريخ انتهاء الصلاحية', 'date');
+  const qty = adminField(panel, 'الكمية المستلمة', 'number');
+  const cost = adminField(panel, 'تكلفة الوحدة', 'number');
+  const price = adminField(panel, 'سعر البيع', 'number');
+  const status = adminText(panel, '');
+  adminButton(panel, 'حفظ فاتورة الشراء واستلام المخزون', async () => {
+    const q = Number(qty.value), c = Number(cost.value), p = Number(price.value);
+    if (!supplier.value.trim() || !name.value.trim() || !expiry.value || q <= 0) return status.textContent = 'أكمل البيانات المطلوبة';
+    const purchaseId = 'PUR-' + crypto.randomUUID();
+    try {
+      await runTransaction(db, async tx => {
+        const stockRef = doc(db, 'pharmacy', 'main_branch');
+        const snap = await tx.get(stockRef);
+        const inv = [...(snap.data()?.inventory || [])];
+        const stockId = crypto.randomUUID();
+        inv.push({ id: stockId, name: name.value.trim(), generic: '', barcode: barcode.value.trim(), expiryDate: expiry.value, qty: q, price: p, purchaseCost: c, purchaseId, supplierName: supplier.value.trim() });
+        tx.update(stockRef, { inventory: inv });
+        tx.set(doc(db, 'purchases', purchaseId), { id: purchaseId, branchId: 'main_branch', supplierName: supplier.value.trim(), createdAt: new Date().toISOString(), total: q * c, paid: q * c, balance: 0 });
+      });
+      status.textContent = 'تم حفظ فاتورة الشراء: ' + purchaseId;
+    } catch (e) { status.textContent = 'فشل الحفظ: ' + e.message; }
+  });
+}
+
+async function showEmployees() {
+  if (!requireAdmin() || !requireOnlineWrite()) return;
+  const { panel } = adminPanel('إدارة الموظفين والصلاحيات');
+  const name = adminField(panel, 'اسم الموظف');
+  const email = adminField(panel, 'البريد الإلكتروني', 'email');
+  const status = adminText(panel, '');
+  adminButton(panel, 'حفظ سجل الموظف', async () => {
+    if (!name.value.trim() || !email.value.trim()) return status.textContent = 'أدخل الاسم والبريد';
+    try {
+      await setDoc(doc(collection(db, 'employees')), { name: name.value.trim(), email: email.value.trim(), role: 'pharmacist', status: 'active', branchId: 'main_branch', createdAt: new Date().toISOString() });
+      status.textContent = 'تم حفظ الموظف';
+    } catch (e) { status.textContent = 'خطأ: ' + e.message; }
+  });
+}
+
+async function showBranches() {
+  if (!requireAdmin() || !requireOnlineWrite()) return;
+  const { panel } = adminPanel('إدارة الفروع');
+  adminText(panel, 'الفرع النشط حالياً: الصيدلية الرئيسية (main_branch)');
+  const name = adminField(panel, 'اسم فرع إضافي');
+  const status = adminText(panel, '');
+  adminButton(panel, 'إضافة سجل فرع', async () => {
+    if (!name.value.trim()) return;
+    await setDoc(doc(collection(db, 'branches')), { name: name.value.trim(), status: 'planned', createdAt: new Date().toISOString() });
+    status.textContent = 'تم حفظ سجل الفرع';
+  });
+}
+
+function showBackupAndRestore() {
+  const { panel } = adminPanel('النسخ الاحتياطي والتصدير');
+  adminText(panel, 'تصدير بيانات المخزون والمبيعات بصيغة JSON.');
+  adminButton(panel, 'تصدير نسخة JSON الآن', () => {
+    const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), pharmacy: state }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'saydaliati-backup-' + todayLocal() + '.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  });
+}
+
+window.showInvoices = showInvoices;
+window.showReports = showReports;
+window.showSuppliers = showSuppliers;
+window.showPurchases = showPurchases;
+window.showEmployees = showEmployees;
+window.showBranches = showBranches;
+window.showBackupAndRestore = showBackupAndRestore;
+
 document.addEventListener('DOMContentLoaded', () => {
-  const barcode = document.getElementById('new-barcode');
-  if (!barcode) return;
-  let timer;
-  barcode.addEventListener('touchstart', () => { timer = setTimeout(scanBarcode, 650); }, {passive:true});
-  for (const event of ['touchend','touchcancel','touchmove']) barcode.addEventListener(event, () => clearTimeout(timer), {passive:true});
-  barcode.addEventListener('dblclick', scanBarcode);
+  updateUI();
 });
 
-// Event delegation avoids embedding medicine IDs in JavaScript attributes.
 document.addEventListener('click', event => {
   const add = event.target.closest('[data-add-id]');
   const remove = event.target.closest('[data-remove-id]');
@@ -316,3 +816,78 @@ document.addEventListener('click', event => {
   else if (remove) window.removeFromCart(remove.dataset.removeId);
   else if (qty) window.updateCartQty(qty.dataset.qtyId, Number(qty.dataset.delta));
 });
+
+window.addEventListener('offline', () => { serverVerified = false; syncStatus('دون إنترنت — وضع العمل المحلي', false); });
+window.addEventListener('online', () => { if (authenticatedAdmin) initCloudSync(); });
+
+
+// --- تفعيل وإدارة صلاحيات الكاميرا والتخزين المحلي المستمر (V5.1) ---
+const LOCAL_INV_CACHE_KEY = 'saydaliati_local_inventory_cache_v1';
+const LOCAL_META_CACHE_KEY = 'saydaliati_local_meta_cache_v1';
+
+function saveLocalSnapshot() {
+  try {
+    if (Array.isArray(state.inventory) && state.inventory.length) {
+      localStorage.setItem(LOCAL_INV_CACHE_KEY, JSON.stringify(state.inventory));
+      localStorage.setItem(LOCAL_META_CACHE_KEY, JSON.stringify({
+        salesTotal: state.salesTotal || 0,
+        dailySales: state.dailySales || {},
+        updatedAt: new Date().toISOString()
+      }));
+    }
+  } catch (e) {
+    console.warn('تعذر الحفظ في التخزين المحلي:', e);
+  }
+}
+
+function loadLocalSnapshot() {
+  try {
+    const rawInv = localStorage.getItem(LOCAL_INV_CACHE_KEY);
+    const rawMeta = localStorage.getItem(LOCAL_META_CACHE_KEY);
+    if (rawInv) {
+      const parsedInv = JSON.parse(rawInv);
+      if (Array.isArray(parsedInv) && parsedInv.length) state.inventory = parsedInv;
+    }
+    if (rawMeta) {
+      const parsedMeta = JSON.parse(rawMeta);
+      if (parsedMeta && typeof parsedMeta === 'object') {
+        state.salesTotal = Number(parsedMeta.salesTotal) || state.salesTotal;
+        state.dailySales = parsedMeta.dailySales || state.dailySales;
+      }
+    }
+  } catch (e) {
+    console.warn('تعذر قراءة التخزين المحلي:', e);
+  }
+}
+
+async function requestCameraAndStoragePermissions() {
+  let camStatus = 'غير مدعومة';
+  try {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      const testStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      testStream.getTracks().forEach(t => t.stop());
+      camStatus = 'مفعّلة ومصرّح بها ✓';
+    }
+  } catch (e) {
+    camStatus = 'مرفوضة أو غير متاحة (' + (e.name || 'خطأ') + ')';
+  }
+
+  let storageStatus = 'متاح (localStorage + IndexedDB)';
+  try {
+    if (navigator.storage && navigator.storage.persist) {
+      const persisted = await navigator.storage.persist();
+      storageStatus = persisted ? 'تخزين دائم محمي من المسح التلقائي ✓' : 'تخزين محلي نشط ✓';
+    }
+    saveLocalSnapshot();
+  } catch (e) {
+    storageStatus = 'تخزين محلي أساسي';
+  }
+
+  alert(`حالة الصلاحيات في الجهاز:\n\n📷 صلاحية الكاميرا (للباركود): ${camStatus}\n💾 صلاحية التخزين المحلي: ${storageStatus}`);
+}
+window.requestCameraAndStoragePermissions = requestCameraAndStoragePermissions;
+
+// تحميل النسخة المحلية فوراً عند فتح التطبيق وقبل اكتمال الاتصال السحابي
+loadLocalSnapshot();
+window.addEventListener('beforeunload', saveLocalSnapshot);
+setInterval(saveLocalSnapshot, 15000);
