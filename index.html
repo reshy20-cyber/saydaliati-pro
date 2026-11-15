@@ -1,360 +1,208 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>صيدليتي PRO | SAYDALIATI</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#003a2c">
-  <style>
-    :root { --forest: #003e30; --green: #006b3d; --gold: #f4c66c; }
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body { margin: 0; padding: 0; background: #e9edf0; font-family: system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif; color: #102e25; }
-    .app-shell {
-      width: 100%; max-width: 430px; margin: 0 auto; min-height: 100dvh;
-      background: linear-gradient(180deg, #f7fafb 0%, #edf2f5 100%);
-      box-shadow: 0 0 35px rgba(25, 57, 42, 0.14);
-      display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow-x: hidden;
-    }
-    @media (min-width: 500px) {
-      .app-shell { margin: 16px auto; min-height: 850px; border-radius: 36px; border: 4px solid #003a2c; overflow: hidden; }
-    }
-    /* Branded Header matching reference image */
-    .hero-header {
-      position: relative;
-      background: linear-gradient(145deg, #003a2c 0%, #00533b 65%, #00683e 100%);
-      padding: 18px 16px 38px;
-      border-bottom: 4px solid #e7bd6b;
-      border-radius: 0 0 28% 8% / 0 0 14% 4%;
-      box-shadow: 0 6px 16px rgba(0, 59, 43, 0.22);
-      color: white;
-    }
-    .hero-header::after {
-      content: ""; position: absolute; inset: 0; opacity: 0.14; pointer-events: none;
-      background: radial-gradient(circle at 20% 80%, #a7f3d0 0%, transparent 55%),
-                  repeating-linear-gradient(90deg, rgba(255,255,255,0.12) 0 14px, transparent 14px 28px);
-      border-radius: inherit;
-    }
-    .branch-pill {
-      background: linear-gradient(180deg, #ffffff 0%, #f6f8f9 100%);
-      color: #063c2d; border-radius: 16px;
-      box-shadow: 0 5px 14px rgba(0, 27, 22, 0.18);
-      padding: 11px 14px; margin: -24px 14px 12px; position: relative; z-index: 10;
-      border: 1px solid #dce6e2;
-    }
-    .stat-card {
-      min-height: 104px; border-radius: 16px; padding: 12px 10px;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
-      box-shadow: 0 3px 8px rgba(32, 56, 43, 0.16);
-    }
-    .stat-sales { background: linear-gradient(140deg, #09617a, #002c49); color: #fff; }
-    .stat-items { background: linear-gradient(140deg, #00945a, #00502f); color: #fff; }
-    .stat-warn  { background: linear-gradient(145deg, #fff4d5, #ffdfa0); color: #451a03; }
-    .shortcut-btn {
-      min-height: 78px; padding: 9px 4px;
-      background: linear-gradient(180deg, #ffffff 0%, #f6f8fa 100%);
-      border: 1px solid #d4dee2; border-radius: 15px;
-      box-shadow: 0 3px 5px rgba(22, 62, 48, 0.14);
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
-      font-size: 11px; font-weight: 800; color: #102e25; transition: transform 0.12s;
-    }
-    .shortcut-btn:active { transform: scale(0.96); }
-    .shortcut-icon { color: #006139; display: flex; align-items: center; justify-content: center; height: 28px; }
-    .sub-header {
-      background: linear-gradient(135deg, #00392c, #00533c);
-      color: white; padding: 22px 16px 20px;
-      border-radius: 0 0 28% 6% / 0 0 16% 4%;
-      border-bottom: 3px solid #e7bd6b;
-    }
-    .gold-cta {
-      background: linear-gradient(180deg, #008c50 0%, #00432f 100%);
-      border: 2px solid #f4ca73; border-radius: 17px;
-      color: white; font-weight: 900; box-shadow: 0 4px 12px rgba(0, 67, 47, 0.28);
-    }
-    .bottom-nav {
-      background: linear-gradient(145deg, #003a2d, #00553b);
-      border-top: 2px solid #c8a85b;
-      border-radius: 24px 24px 0 0;
-      padding: 10px 14px max(10px, env(safe-area-inset-bottom));
-      box-shadow: 0 -4px 18px rgba(0, 42, 34, 0.22);
-    }
-    .hidden { display: none !important; }
-    @media print {
-      body * { visibility: hidden; }
-      #invoice-print-area, #invoice-print-area * { visibility: visible; }
-      #invoice-print-area { position: fixed; inset: 0; background: white; padding: 20px; z-index: 99999; }
-      .no-print { display: none !important; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>صيدليتي PRO - نظام إدارة الصيدليات</title>
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
+    <style>
+        :root {
+            --primary: #0f5132;
+            --primary-light: #198754;
+            --bg: #f4f6f5;
+            --card: #ffffff;
+            --text: #1a1a1a;
+            --muted: #6c757d;
+        }
+        * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+        body { margin: 0; background: var(--bg); color: var(--text); padding-bottom: 70px; }
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 16px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .header h1 { margin: 0; font-size: 1.4rem; }
+        .header p { margin: 4px 0 0; font-size: 0.85rem; opacity: 0.9; }
+        .container { padding: 16px; max-width: 600px; margin: auto; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+        .stat-card {
+            background: var(--primary);
+            color: white;
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .stat-card.secondary { background: #103c42; }
+        .stat-val { font-size: 1.5rem; font-weight: bold; margin-top: 6px; }
+        .actions-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .action-btn {
+            background: var(--card);
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 16px 8px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: transform 0.1s;
+        }
+        .action-btn:active { transform: scale(0.97); }
+        .action-btn.highlight {
+            background: #e8f5e9;
+            border-color: var(--primary-light);
+            color: var(--primary);
+            font-weight: bold;
+        }
+        .action-icon { font-size: 1.6rem; display: block; margin-bottom: 6px; }
+        .result-box {
+            margin-top: 16px;
+            background: var(--card);
+            padding: 14px;
+            border-radius: 12px;
+            border-right: 4px solid var(--primary-light);
+            display: none;
+        }
+        .manual-input-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .manual-input-group input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        .manual-input-group button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0 16px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-  <div class="app-shell">
-    <div class="flex-1 overflow-y-auto pb-24">
 
-      <!-- 1. الشاشة الرئيسية -->
-      <div id="screen-home" class="screen-view">
-        <div class="hero-header">
-          <div class="flex justify-between items-center relative z-10">
-            <button onclick="window.showAdminLogin()" title="إشعارات وحالة السحابة" class="relative w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
-              <i data-lucide="bell" class="w-5 h-5 text-amber-300 fill-amber-300"></i>
-              <span id="cloud-dot" class="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-amber-400 border border-emerald-950"></span>
-            </button>
-
-            <div class="flex items-center gap-3">
-              <div class="text-right">
-                <h1 class="text-3xl font-black tracking-tight leading-none text-white">صيدليتي</h1>
-                <p class="text-sm font-extrabold tracking-widest text-amber-200 mt-0.5">SAYDALIATI</p>
-              </div>
-              <div class="w-14 h-13 rounded-t-md rounded-b-3xl border-[3px] border-white bg-gradient-to-br from-emerald-500 to-emerald-900 flex flex-col items-center justify-center shadow-md relative">
-                <span class="text-xs leading-none -mt-1">🌿</span>
-                <span class="text-white font-black text-xl leading-none">+</span>
-              </div>
-            </div>
-
-            <button onclick="window.showAdminLogin()" title="حساب المدير والإعدادات" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
-              <i data-lucide="menu" class="w-6 h-6 text-amber-200"></i>
-            </button>
-          </div>
-          <p class="text-center text-xs font-extrabold text-white/95 mt-2 relative z-10">نظام متكامل لإدارة الصيدليات والفروع</p>
-        </div>
-
-        <!-- شريط الصيدلية الحالية -->
-        <div class="branch-pill flex justify-between items-center text-xs font-extrabold">
-          <div class="flex items-center gap-2">
-            <span class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-800 flex items-center justify-center border border-emerald-200">
-              <i data-lucide="store" class="w-4 h-4"></i>
-            </span>
-            <span>الصيدلية الحالية: الصيدلية الرئيسية</span>
-          </div>
-          <i data-lucide="chevron-down" class="w-4 h-4 text-emerald-800"></i>
-        </div>
-
-        <div class="px-3.5 space-y-3">
-          <!-- البطاقات الإحصائية الأربع -->
-          <div class="grid grid-cols-2 gap-2.5">
-            <div class="stat-card stat-sales">
-              <i data-lucide="chart-no-axes-column-increasing" class="w-6 h-6 text-sky-200 mb-1"></i>
-              <p class="text-xs font-bold text-sky-100">مبيعات اليوم</p>
-              <h3 id="dash-sales" class="text-xl font-black mt-0.5">£1,245.50</h3>
-            </div>
-            <div class="stat-card stat-items">
-              <i data-lucide="pill" class="w-6 h-6 text-emerald-200 mb-1"></i>
-              <p class="text-xs font-bold text-emerald-100">عدد الأصناف</p>
-              <h3 id="dash-items-count" class="text-xl font-black mt-0.5">2,860</h3>
-            </div>
-            <div class="stat-card stat-warn">
-              <i data-lucide="package" class="w-6 h-6 text-amber-800 mb-1"></i>
-              <p class="text-xs font-extrabold text-amber-900">منخفض المخزون</p>
-              <h3 id="dash-low-stock" class="text-lg font-black text-amber-950 mt-0.5">23 صنفاً</h3>
-            </div>
-            <div class="stat-card stat-warn">
-              <i data-lucide="triangle-alert" class="w-6 h-6 text-amber-800 mb-1"></i>
-              <p class="text-xs font-extrabold text-amber-900">قريب من الصلاحية</p>
-              <h3 id="dash-near-expiry" class="text-lg font-black text-amber-950 mt-0.5">18 صنفاً</h3>
-            </div>
-          </div>
-
-          <!-- شبكة الاختصارات الـ 12 -->
-          <div class="grid grid-cols-4 gap-2">
-            <button onclick="window.switchScreen('screen-pos')" class="shortcut-btn">
-              <span class="shortcut-icon"><i data-lucide="printer" class="w-6 h-6"></i></span>المبيعات
-            </button>
-            <button onclick="window.showInvoices()" class="shortcut-btn">
-              <span class="shortcut-icon"><i data-lucide="file-text" class="w-6 h-6"></i></span>الفواتير
-            </button>
-            <button onclick="window.switchScreen('screen-inventory')" class="shortcut-btn">
-              <span class="shortcut-icon"><i data-lucide="pill" class="w-6 h-6"></i></span>الأدوية
-            </button>
-            <button onclick="window.switchScreen('screen-inventory')" class="shortcut-btn">
-              <span class="shortcut-icon"><i data-lucide="boxes" class="w-6 h-6"></i></span>المخزون
-            </button>
-            <button onclick="window.showPurchases()" class="shortcut-btn">
-              <span class="shortcut-icon"><i data-lucide="shopping-cart" class="w-6 h-6"></i></span>المشتريات
-            </button>
-            <button onclick="window.showSuppliers()" class="shortcut-btn">
-              <span class="shortcut-icon"><i data-lucide="truck" class="w-6 h-6"></i></span>الموردون
-            </button>
-            <button onclick="window.showReports()" class="shortcut-btn">
-              <span class="shortcut-icon"><i data-lucide="chart-no-axes-combined" class="w-6 h-6"></i></span>التقارير
-            </button>
-            <button onclick="window.showBranches()" class="shortcut-btn">
-              <span class="shortcut-icon"><i data-lucide="store" class="w-6 h-6"></i></span>الفروع
-            </button>
-            <button onclick="window.showEmployees()" class="shortcut-btn">
-              <span class="shortcut-icon"><i data-lucide="users" class="w-6 h-6"></i></span>الموظفون
-            </button>
-            <button onclick="window.showAdminLogin()" class="shortcut-btn">
-              <span class="shortcut-icon"><i data-lucide="settings" class="w-6 h-6"></i></span>الإعدادات
-            </button>
-            <button onclick="window.showBackupAndRestore()" class="shortcut-btn">
-              <span class="shortcut-icon"><i data-lucide="cloud-upload" class="w-6 h-6"></i></span>النسخ الاحتياطي
-            </button>
-            <button onclick="window.scanBarcode('pos')" class="shortcut-btn">
-              <span class="shortcut-icon"><i data-lucide="scan-barcode" class="w-6 h-6"></i></span>الباركود
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 2. شاشة الأدوية والمخزون -->
-      <div id="screen-inventory" class="screen-view hidden">
-        <div class="sub-header flex justify-between items-center">
-          <button onclick="window.switchScreen('screen-home')" class="p-2 rounded-xl bg-white/10">
-            <i data-lucide="chevron-right" class="w-6 h-6"></i>
-          </button>
-          <div class="flex items-center gap-2">
-            <h2 class="text-xl font-black">الأدوية والمخزون</h2>
-            <i data-lucide="pill" class="w-6 h-6 text-amber-300"></i>
-          </div>
-          <div class="w-8"></div>
-        </div>
-
-        <div class="px-3.5 -mt-4 space-y-3">
-          <div class="bg-white rounded-2xl shadow-md px-3.5 py-2.5 flex items-center gap-2 border border-slate-200">
-            <i data-lucide="search" class="w-5 h-5 text-slate-400"></i>
-            <input id="inv-search" oninput="window.filterInventoryText(this.value)" type="text" placeholder="البحث عن دواء (الاسم أو الباركود)" class="flex-1 text-xs font-bold focus:outline-none bg-transparent">
-            <button onclick="window.scanBarcode('inv')" class="p-1.5 rounded-lg bg-emerald-50 text-emerald-800">
-              <i data-lucide="scan-barcode" class="w-5 h-5"></i>
-            </button>
-          </div>
-
-          <div class="flex gap-2 overflow-x-auto text-xs font-extrabold">
-            <button onclick="window.filterInventory('all', this)" class="inv-filter-btn px-4 py-2 rounded-full bg-emerald-800 text-white shadow">الكل</button>
-            <button onclick="window.filterInventory('low_stock', this)" class="inv-filter-btn px-4 py-2 rounded-full bg-white text-slate-700 border border-slate-200">منخفض المخزون</button>
-            <button onclick="window.filterInventory('near_expiry', this)" class="inv-filter-btn px-4 py-2 rounded-full bg-white text-slate-700 border border-slate-200">قريب من الصلاحية</button>
-          </div>
-
-          <div id="inventory-cards-container" class="space-y-2.5"></div>
-
-          <button onclick="window.switchScreen('screen-add-product')" class="gold-cta w-full py-3.5 text-base flex items-center justify-center gap-2 mt-2">
-            <span>+ إضافة دواء جديد</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- 3. شاشة المبيعات (نقطة البيع) -->
-      <div id="screen-pos" class="screen-view hidden">
-        <div class="sub-header flex justify-between items-center">
-          <button onclick="window.switchScreen('screen-home')" class="p-2 rounded-xl bg-white/10">
-            <i data-lucide="chevron-right" class="w-6 h-6"></i>
-          </button>
-          <div class="flex items-center gap-2">
-            <h2 class="text-xl font-black">المبيعات (نقطة البيع)</h2>
-            <i data-lucide="shopping-cart" class="w-6 h-6 text-amber-300"></i>
-          </div>
-          <div class="w-8"></div>
-        </div>
-
-        <div class="px-3.5 -mt-4 space-y-3">
-          <div class="bg-white rounded-2xl shadow-md px-3.5 py-2.5 flex items-center gap-2 border border-slate-200 relative">
-            <i data-lucide="search" class="w-5 h-5 text-slate-400"></i>
-            <input id="pos-search" oninput="window.searchPosQuick(this.value)" type="text" placeholder="البحث عن دواء أو مسح الباركود" class="flex-1 text-xs font-bold focus:outline-none bg-transparent">
-            <button onclick="window.scanBarcode('pos')" class="p-1.5 rounded-lg bg-emerald-50 text-emerald-800">
-              <i data-lucide="scan-barcode" class="w-5 h-5"></i>
-            </button>
-            <div id="pos-quick-results" class="hidden absolute top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-xl border border-slate-200 z-30 max-h-48 overflow-y-auto"></div>
-          </div>
-
-          <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200 space-y-3">
-            <div id="cart-items-container" class="space-y-2.5 max-h-72 overflow-y-auto"></div>
-
-            <div class="border-t border-slate-100 pt-3 space-y-2 text-xs font-extrabold">
-              <div class="flex justify-between text-slate-600">
-                <span>الإجمالي الفرعي</span>
-                <span id="cart-subtotal">£0.00</span>
-              </div>
-              <div class="flex justify-between items-center text-slate-600">
-                <span class="flex items-center gap-1"><i data-lucide="tag" class="w-3.5 h-3.5 text-emerald-700"></i> الخصم</span>
-                <input id="pos-discount" oninput="window.renderCart()" type="number" min="0" step="0.5" value="0" class="w-20 text-left bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 font-extrabold">
-              </div>
-              <div class="bg-gradient-to-l from-amber-100 to-amber-200/80 rounded-xl px-3.5 py-2.5 flex justify-between items-center border border-amber-300">
-                <span class="text-sm font-black text-emerald-950 flex items-center gap-1.5">
-                  <i data-lucide="coins" class="w-5 h-5 text-amber-700"></i> الإجمالي النهائي
-                </span>
-                <span id="cart-final-total" class="text-xl font-black text-emerald-950">£0.00</span>
-              </div>
-            </div>
-          </div>
-
-          <button onclick="window.checkout()" class="gold-cta w-full py-3.5 text-base flex items-center justify-center gap-2">
-            <i data-lucide="shopping-cart" class="w-5 h-5"></i>
-            <span>إتمام البيع وإصدار الفاتورة</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- 4. شاشة إضافة دواء جديد -->
-      <div id="screen-add-product" class="screen-view hidden">
-        <div class="sub-header flex justify-between items-center">
-          <button onclick="window.switchScreen('screen-inventory')" class="p-2 rounded-xl bg-white/10">
-            <i data-lucide="chevron-right" class="w-6 h-6"></i>
-          </button>
-          <h2 class="text-xl font-black">إضافة دواء جديد</h2>
-          <div class="w-8"></div>
-        </div>
-        <form id="add-product-form" onsubmit="window.addNewProduct(event)" class="p-4 space-y-3">
-          <div class="bg-white p-4 rounded-2xl shadow-sm space-y-3 border border-slate-200">
-            <div>
-              <label class="block text-xs font-extrabold mb-1">اسم الدواء التجاري</label>
-              <input type="text" id="new-name" required placeholder="مثال: بانادول 500 مجم" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold">
-            </div>
-            <div>
-              <label class="block text-xs font-extrabold mb-1">الاسم العلمي (Generic)</label>
-              <input type="text" id="new-generic" required placeholder="Paracetamol 500 mg" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold">
-            </div>
-            <div>
-              <label class="block text-xs font-extrabold mb-1">الباركود</label>
-              <div class="flex gap-2">
-                <input type="text" id="new-barcode" required placeholder="امسح أو اكتب الباركود" class="flex-1 bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold">
-                <button type="button" onclick="window.scanBarcode('new')" class="px-3.5 rounded-xl bg-emerald-800 text-white font-bold">
-                  <i data-lucide="scan-barcode" class="w-5 h-5"></i>
-                </button>
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-2.5">
-              <div>
-                <label class="block text-xs font-extrabold mb-1">سعر البيع (£)</label>
-                <input type="number" step="0.01" id="new-price" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold">
-              </div>
-              <div>
-                <label class="block text-xs font-extrabold mb-1">الكمية بالمخزون</label>
-                <input type="number" id="new-qty" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold">
-              </div>
-            </div>
-            <div>
-              <label class="block text-xs font-extrabold mb-1">تاريخ انتهاء الصلاحية</label>
-              <input type="date" id="new-expiry" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold">
-            </div>
-          </div>
-          <button type="submit" class="gold-cta w-full py-3.5 text-base">حفظ الدواء في المخزون</button>
-        </form>
-      </div>
-
+    <div class="header">
+        <h1>صيدليتي PRO</h1>
+        <p>نظام متكامل لإدارة الصيدليات والفروع</p>
     </div>
 
-    <!-- شريط التنقل السفلي -->
-    <nav class="bottom-nav fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto flex justify-between items-center text-[11px] font-extrabold z-40">
-      <button onclick="window.switchScreen('screen-home')" id="nav-home" class="nav-btn flex flex-col items-center gap-1 text-amber-300">
-        <i data-lucide="house" class="w-5 h-5"></i><span>الرئيسية</span>
-      </button>
-      <button onclick="window.switchScreen('screen-pos')" id="nav-pos" class="nav-btn flex flex-col items-center gap-1 text-white/85">
-        <i data-lucide="shopping-cart" class="w-5 h-5"></i><span>المبيعات</span>
-      </button>
-      <button onclick="window.switchScreen('screen-inventory')" id="nav-inv" class="nav-btn flex flex-col items-center gap-1 text-white/85">
-        <i data-lucide="boxes" class="w-5 h-5"></i><span>المخزون</span>
-      </button>
-      <button onclick="window.showReports()" class="nav-btn flex flex-col items-center gap-1 text-white/85">
-        <i data-lucide="chart-no-axes-column-increasing" class="w-5 h-5"></i><span>التقارير</span>
-      </button>
-      <button onclick="window.showBackupAndRestore()" class="nav-btn flex flex-col items-center gap-1 text-white/85">
-        <i data-lucide="ellipsis" class="w-5 h-5"></i><span>المزيد</span>
-      </button>
-    </nav>
-  </div>
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div>عدد الأصناف</div>
+                <div class="stat-val" id="itemsCount">2,860</div>
+            </div>
+            <div class="stat-card secondary">
+                <div>مبيعات اليوم</div>
+                <div class="stat-val" id="salesToday">£1245.50</div>
+            </div>
+        </div>
 
-  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-  <script type="module" src="app.js"></script>
+        <!-- عنصر التقاط الصور عبر كاميرا النظام الأساسية -->
+        <input type="file" id="nativeBarcodeScanner" accept="image/*" capture="environment" style="display: none;">
+
+        <div class="actions-grid">
+            <div class="action-btn highlight" id="barcodeBtn">
+                <span class="action-icon">📷</span>
+                <span>مسح الباركود</span>
+            </div>
+            <div class="action-btn" onclick="alert('قسم المبيعات')">
+                <span class="action-icon">🛒</span>
+                <span>المبيعات</span>
+            </div>
+            <div class="action-btn" onclick="alert('قسم المخزون')">
+                <span class="action-icon">📦</span>
+                <span>المخزون</span>
+            </div>
+            <div class="action-btn" onclick="alert('قسم المشتريات')">
+                <span class="action-icon">🚚</span>
+                <span>المشتريات</span>
+            </div>
+            <div class="action-btn" onclick="alert('قسم التقارير')">
+                <span class="action-icon">📊</span>
+                <span>التقارير</span>
+            </div>
+            <div class="action-btn" onclick="alert('الإعدادات')">
+                <span class="action-icon">⚙️</span>
+                <span>الإعدادات</span>
+            </div>
+        </div>
+
+        <div class="manual-input-group">
+            <input type="text" id="barcodeResultInput" placeholder="رقم الباركود يظهر هنا أو أدخله يدوياً...">
+            <button onclick="searchProduct()">بحث</button>
+        </div>
+
+        <div class="result-box" id="statusBox"></div>
+    </div>
+
+    <script>
+        const barcodeBtn = document.getElementById('barcodeBtn');
+        const nativeScanner = document.getElementById('nativeBarcodeScanner');
+        const barcodeInput = document.getElementById('barcodeResultInput');
+        const statusBox = document.getElementById('statusBox');
+
+        function showStatus(msg, isError = false) {
+            statusBox.style.display = 'block';
+            statusBox.style.borderRightColor = isError ? '#dc3545' : '#198754';
+            statusBox.textContent = msg;
+        }
+
+        // فتح كاميرا الهاتف الأساسية مباشرة عند النقر على زر الباركود
+        barcodeBtn.addEventListener('click', () => {
+            nativeScanner.value = ''; // تصفير القيمة السابقة للسماح بتكرار التصوير
+            nativeScanner.click();
+        });
+
+        // معالجة الصورة الملتقطة واستخراج رقم الباركود منها
+        nativeScanner.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            showStatus('جاري تحليل صورة الباركود...');
+
+            try {
+                const imgUrl = URL.createObjectURL(file);
+                const img = new Image();
+                img.src = imgUrl;
+
+                img.onload = async () => {
+                    try {
+                        const codeReader = new ZXing.BrowserMultiFormatReader();
+                        const result = await codeReader.decodeFromImageElement(img);
+                        if (result && result.text) {
+                            barcodeInput.value = result.text;
+                            showStatus('تمت قراءة الباركود بنجاح: ' + result.text);
+                            searchProduct();
+                        } else {
+                            showStatus('لم يتم التعرف على باركود واضح في الصورة. حاول التقريب أكثر.', true);
+                        }
+                    } catch (err) {
+                        showStatus('تعذرت قراءة الباركود من الصورة. تأكد من وضوح الإضاءة أو أدخله يدوياً.', true);
+                    } finally {
+                        URL.revokeObjectURL(imgUrl);
+                    }
+                };
+            } catch (error) {
+                showStatus('حدث خطأ أثناء معالجة الصورة.', true);
+            }
+        });
+
+        function searchProduct() {
+            const code = barcodeInput.value.trim();
+            if (!code) {
+                showStatus('يرجى مسح الباركود أو إدخال الرقم أولاً.', true);
+                return;
+            }
+            showStatus('جاري البحث عن الصنف برقم الباركود: ' + code);
+        }
+    </script>
 </body>
 </html>
