@@ -2,321 +2,360 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>صيدليتي | SAYDALIATI PRO</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>صيدليتي PRO | SAYDALIATI</title>
   <script src="https://cdn.tailwindcss.com"></script>
-
-<style>
-:root{--forest:#003e30;--green:#006b3d;--gold:#f4c66c}
-*{box-sizing:border-box}body{background:#e9edf0!important;font-family:system-ui,-apple-system,"Arial",sans-serif!important;color:#102e25}
-body>div{border:0!important;border-radius:0!important;max-width:430px;margin:auto;background:linear-gradient(#f7fafb,#edf2f5)!important;box-shadow:0 0 35px #19392a22!important}
-#screen-home,#screen-inventory,#screen-pos{padding:0 14px 18px!important}
-#screen-home>div:first-child{margin:0 -14px 13px!important;padding:20px 18px 16px!important;border-radius:0 0 28% 5% / 0 0 12% 3%!important;background:linear-gradient(145deg,#003a2c,#00533b 67%,#00683e)!important;border-bottom:5px solid #e7bd6b;box-shadow:0 5px 14px #003b2b33!important}
-#screen-home>div:first-child>div:first-child{min-height:82px;justify-content:center;position:relative}
-#screen-home>div:first-child>div:first-child>div:first-child{flex-direction:row-reverse;gap:12px!important}
-#screen-home h1{font-size:34px!important;line-height:1.15;font-weight:900!important;letter-spacing:0!important}
-#screen-home h1+p{font-size:17px!important;color:white!important;letter-spacing:.4px!important}
-#screen-home .brand-mark{font-size:30px;color:white;display:grid;place-items:center;width:62px;height:56px;border:3px solid white;border-radius:4px 4px 28px 28px;background:linear-gradient(150deg,#009d59,#004e32);box-shadow:0 2px 0 #dbb45e}
-#screen-home>div:first-child>div:first-child>div:last-child{position:absolute;right:0;top:0}
-#screen-home>div:first-child>div:nth-child(2) p{font-size:12px!important;color:white!important;font-weight:800!important}
-#screen-home>div:first-child>div:last-child{background:white!important;color:#073c2c!important;border:0!important;border-radius:16px!important;box-shadow:0 5px 12px #001b1630!important;padding:13px 12px!important;margin-bottom:-25px;margin-top:12px;font-size:12px!important}
-#screen-home>div:first-child>div:last-child span{color:#064e36}
-#screen-home>div:nth-child(2){margin-top:32px;gap:9px!important}
-#screen-home>div:nth-child(2)>div{min-height:107px!important;padding:12px 8px!important;border-radius:16px!important;text-align:center;align-items:center;justify-content:center;box-shadow:0 3px 6px #20382b28!important}
-#screen-home>div:nth-child(2)>div:nth-child(1){background:linear-gradient(140deg,#09617a,#002c49)!important}
-#screen-home>div:nth-child(2)>div:nth-child(2){background:linear-gradient(140deg,#00945a,#00502f)!important}
-#screen-home>div:nth-child(2)>div:nth-child(n+3){background:linear-gradient(145deg,#fff4d5,#ffdfa0)!important;border:0!important}
-#screen-home>div:nth-child(2)>div>div:first-child{margin:0!important;justify-content:center}
-#screen-home>div:nth-child(2)>div>div:first-child span{padding:0!important;background:none!important;font-size:22px!important}
-#screen-home>div:nth-child(2)>div>div:first-child svg{width:25px;height:25px}
-#screen-home>div:nth-child(2)>div p{font-size:12px!important;font-weight:800!important}
-#screen-home>div:nth-child(2)>div h3{font-size:22px!important}
-#screen-home>div:nth-child(3){gap:8px!important;margin-top:13px!important}
-#screen-home>div:nth-child(3)>button{padding:10px 2px!important;min-width:0;min-height:79px;border-radius:16px!important;border:1px solid #d7e0e4!important;box-shadow:0 3px 5px #0d2b2430!important;font-size:11px!important;color:#101b19!important;gap:5px!important}
-#screen-home>div:nth-child(3)>button>span{background:none!important;box-shadow:none!important;width:auto!important;height:31px!important;color:#00683d!important}
-#screen-home>div:nth-child(3)>button svg{width:27px;height:27px;stroke-width:2.5}
-#screen-inventory>div:first-child,#screen-pos>div:first-child{margin:0 -14px 16px!important;padding:30px 16px 24px!important;border-radius:0 0 28% 5% / 0 0 16% 4%!important;background:linear-gradient(130deg,#00392c,#00533c)!important;min-height:120px;box-shadow:none!important}
-#screen-inventory h2,#screen-pos h2{font-size:22px!important}
-#screen-inventory input,#screen-pos input{height:53px;font-size:13px!important;border-radius:20px!important;box-shadow:0 3px 10px #122f2a24!important}
-#screen-inventory .inv-filter-btn{padding:9px 12px!important;border-radius:20px!important;white-space:nowrap}
-#screen-pos>div:nth-child(3){border-radius:19px!important}
-#screen-pos button[onclick="window.checkout()"]{background:linear-gradient(#008c50,#00432f)!important;border:2px solid #f4ca73!important;border-radius:17px!important;font-size:15px!important}
-nav,body>div>div:last-child:has(.nav-btn){background:linear-gradient(125deg,#003b2c,#00533a)!important;border-radius:24px 24px 0 0!important}
-.nav-btn{color:white!important}.nav-btn svg{color:white!important}
-.hidden{display:none!important}
-</style>
-
-<style id="approved-reference-v4">
-/* Exact user-supplied screenshot artwork for the branded header; no invented logo */
-html,body{margin:0!important;background:#edf2f5!important}
-body>div{border:0!important;border-radius:0!important;max-width:430px!important;min-height:100dvh!important;box-shadow:none!important}
-#screen-home{padding:0 13px 20px!important}
-#screen-home>div:first-child{height:209px!important;min-height:209px!important;margin:0 -13px 37px!important;padding:0 12px!important;border:0!important;border-radius:0!important;overflow:visible!important;background:#004634 url('header-reference.jpg') center top/100% 175px no-repeat!important;box-shadow:none!important}
-#screen-home>div:first-child>div:first-child,#screen-home>div:first-child>div:nth-child(2){visibility:hidden!important;height:0!important;min-height:0!important;padding:0!important;margin:0!important;overflow:hidden!important}
-#screen-home>div:first-child>div:last-child{position:absolute!important;top:166px!important;left:12px!important;right:12px!important;margin:0!important;padding:12px 10px!important;min-height:49px!important;border-radius:17px!important;background:linear-gradient(#fff,#f6f8f9)!important;box-shadow:0 4px 12px #002e2833!important;color:#063c2d!important;z-index:2;font-size:12px!important}
-#screen-home>div:nth-child(2){margin-top:0!important;gap:9px!important}
-#screen-home>div:nth-child(2)>div{min-height:104px!important;border-radius:15px!important;padding:9px 5px!important}
-#screen-home>div:nth-child(2)>div>div:first-child{margin:0!important}
-#screen-home>div:nth-child(2)>div p{font-size:12px!important;margin:2px 0!important}
-#screen-home>div:nth-child(2)>div h3{font-size:21px!important}
-#screen-home>div:nth-child(3){gap:8px!important;margin-top:13px!important}
-#screen-home>div:nth-child(3)>button{min-height:78px!important;padding:9px 2px!important;background:linear-gradient(#fff,#f6f8fa)!important;border:1px solid #d4dee2!important;border-radius:15px!important;box-shadow:0 3px 5px #163e3029!important;font-size:11px!important;color:#111!important}
-#screen-home>div:nth-child(3)>button>span{color:#006139!important}
-#screen-home>div:nth-child(3)>button svg{width:29px!important;height:29px!important;stroke-width:2.6!important}
-nav{background:linear-gradient(145deg,#003a2d,#00553b)!important;border-top:2px solid #c8a85b!important;border-radius:24px 24px 0 0!important;padding:11px 12px max(11px,env(safe-area-inset-bottom))!important;box-shadow:0 -4px 18px #002a2233!important}
-nav button{font-size:11px!important;color:white!important;gap:3px!important}
-nav button:first-child{color:#ffe29a!important}
-nav svg{width:22px;height:22px}
-#screen-inventory>div:first-child,#screen-pos>div:first-child{border-radius:0 0 30px 10px!important;background:linear-gradient(140deg,#003c30,#00513e)!important;min-height:95px!important}
-#screen-inventory input,#screen-pos input{background:#fff!important}
-#screen-pos button[onclick="window.checkout()"]{border:2px solid #eac469!important}
-@media(min-width:550px){body>div{margin:20px auto!important;border-radius:25px!important;min-height:850px!important}}
-</style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#003a2c">
+  <style>
+    :root { --forest: #003e30; --green: #006b3d; --gold: #f4c66c; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; padding: 0; background: #e9edf0; font-family: system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif; color: #102e25; }
+    .app-shell {
+      width: 100%; max-width: 430px; margin: 0 auto; min-height: 100dvh;
+      background: linear-gradient(180deg, #f7fafb 0%, #edf2f5 100%);
+      box-shadow: 0 0 35px rgba(25, 57, 42, 0.14);
+      display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow-x: hidden;
+    }
+    @media (min-width: 500px) {
+      .app-shell { margin: 16px auto; min-height: 850px; border-radius: 36px; border: 4px solid #003a2c; overflow: hidden; }
+    }
+    /* Branded Header matching reference image */
+    .hero-header {
+      position: relative;
+      background: linear-gradient(145deg, #003a2c 0%, #00533b 65%, #00683e 100%);
+      padding: 18px 16px 38px;
+      border-bottom: 4px solid #e7bd6b;
+      border-radius: 0 0 28% 8% / 0 0 14% 4%;
+      box-shadow: 0 6px 16px rgba(0, 59, 43, 0.22);
+      color: white;
+    }
+    .hero-header::after {
+      content: ""; position: absolute; inset: 0; opacity: 0.14; pointer-events: none;
+      background: radial-gradient(circle at 20% 80%, #a7f3d0 0%, transparent 55%),
+                  repeating-linear-gradient(90deg, rgba(255,255,255,0.12) 0 14px, transparent 14px 28px);
+      border-radius: inherit;
+    }
+    .branch-pill {
+      background: linear-gradient(180deg, #ffffff 0%, #f6f8f9 100%);
+      color: #063c2d; border-radius: 16px;
+      box-shadow: 0 5px 14px rgba(0, 27, 22, 0.18);
+      padding: 11px 14px; margin: -24px 14px 12px; position: relative; z-index: 10;
+      border: 1px solid #dce6e2;
+    }
+    .stat-card {
+      min-height: 104px; border-radius: 16px; padding: 12px 10px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+      box-shadow: 0 3px 8px rgba(32, 56, 43, 0.16);
+    }
+    .stat-sales { background: linear-gradient(140deg, #09617a, #002c49); color: #fff; }
+    .stat-items { background: linear-gradient(140deg, #00945a, #00502f); color: #fff; }
+    .stat-warn  { background: linear-gradient(145deg, #fff4d5, #ffdfa0); color: #451a03; }
+    .shortcut-btn {
+      min-height: 78px; padding: 9px 4px;
+      background: linear-gradient(180deg, #ffffff 0%, #f6f8fa 100%);
+      border: 1px solid #d4dee2; border-radius: 15px;
+      box-shadow: 0 3px 5px rgba(22, 62, 48, 0.14);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+      font-size: 11px; font-weight: 800; color: #102e25; transition: transform 0.12s;
+    }
+    .shortcut-btn:active { transform: scale(0.96); }
+    .shortcut-icon { color: #006139; display: flex; align-items: center; justify-content: center; height: 28px; }
+    .sub-header {
+      background: linear-gradient(135deg, #00392c, #00533c);
+      color: white; padding: 22px 16px 20px;
+      border-radius: 0 0 28% 6% / 0 0 16% 4%;
+      border-bottom: 3px solid #e7bd6b;
+    }
+    .gold-cta {
+      background: linear-gradient(180deg, #008c50 0%, #00432f 100%);
+      border: 2px solid #f4ca73; border-radius: 17px;
+      color: white; font-weight: 900; box-shadow: 0 4px 12px rgba(0, 67, 47, 0.28);
+    }
+    .bottom-nav {
+      background: linear-gradient(145deg, #003a2d, #00553b);
+      border-top: 2px solid #c8a85b;
+      border-radius: 24px 24px 0 0;
+      padding: 10px 14px max(10px, env(safe-area-inset-bottom));
+      box-shadow: 0 -4px 18px rgba(0, 42, 34, 0.22);
+    }
+    .hidden { display: none !important; }
+    @media print {
+      body * { visibility: hidden; }
+      #invoice-print-area, #invoice-print-area * { visibility: visible; }
+      #invoice-print-area { position: fixed; inset: 0; background: white; padding: 20px; z-index: 99999; }
+      .no-print { display: none !important; }
+    }
+  </style>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" type="text/javascript"></script>
 </head>
-<body class="bg-slate-950 font-sans min-h-screen flex justify-center items-center p-0 sm:p-4">
-
-  <!-- إطار محاكي الهاتف المطابق للصورة الأصلية بنسبة 100% -->
-  <div class="w-full sm:w-[420px] bg-slate-100 min-h-screen sm:min-h-[850px] sm:rounded-[45px] shadow-2xl flex flex-col justify-between relative overflow-hidden border-4 border-slate-800">
-    
-    <!-- محتوى الشاشات -->
+<body>
+  <div class="app-shell">
     <div class="flex-1 overflow-y-auto pb-24">
-      
-      <!-- 1. الشاشة الرئيسية (Home - مطابقة للشاشة الوسطى في الصورة) -->
-      <div id="screen-home" class="screen-view p-4 space-y-4">
-        
-        <!-- الهيدر الأخضر العلوي المتناسق -->
-        <div class="bg-emerald-700 text-white p-5 rounded-[32px] shadow-lg space-y-3 relative overflow-hidden">
-          <div class="flex justify-between items-center">
+
+      <!-- 1. الشاشة الرئيسية -->
+      <div id="screen-home" class="screen-view">
+        <div class="hero-header">
+          <div class="flex justify-between items-center relative z-10">
+            <button onclick="window.showAdminLogin()" title="إشعارات وحالة السحابة" class="relative w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+              <i data-lucide="bell" class="w-5 h-5 text-amber-300 fill-amber-300"></i>
+              <span id="cloud-dot" class="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-amber-400 border border-emerald-950"></span>
+            </button>
+
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-emerald-600 rounded-2xl flex items-center justify-center text-xl shadow-inner"><span class="brand-mark">✚</span></div>
-              <div>
-                <h1 class="font-extrabold text-base tracking-wide">صيدليتي</h1>
-                <p class="text-[11px] font-bold tracking-wider text-emerald-200">SAYDALIATI</p>
+              <div class="text-right">
+                <h1 class="text-3xl font-black tracking-tight leading-none text-white">صيدليتي</h1>
+                <p class="text-sm font-extrabold tracking-widest text-amber-200 mt-0.5">SAYDALIATI</p>
+              </div>
+              <div class="w-14 h-13 rounded-t-md rounded-b-3xl border-[3px] border-white bg-gradient-to-br from-emerald-500 to-emerald-900 flex flex-col items-center justify-center shadow-md relative">
+                <span class="text-xs leading-none -mt-1">🌿</span>
+                <span class="text-white font-black text-xl leading-none">+</span>
               </div>
             </div>
-            <div class="flex items-center gap-2">
-              <button onclick="alert('القائمة الرئيسية')" class="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center text-lg shadow-sm">☰</button>
-            </div>
+
+            <button onclick="window.showAdminLogin()" title="حساب المدير والإعدادات" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+              <i data-lucide="menu" class="w-6 h-6 text-amber-200"></i>
+            </button>
           </div>
-          <div class="text-center py-1">
-            <p class="text-xs text-emerald-100 font-medium">نظام متكامل لإدارة الصيدليات والفروع</p>
-          </div>
-          <!-- منسدل الصيدلية الحالية -->
-          <div class="bg-emerald-800/90 px-4 py-2.5 rounded-2xl flex justify-between items-center text-xs font-bold border border-emerald-600/50 shadow-inner">
-            <div class="flex items-center gap-2">
-              <span><i data-lucide="store"></i></span>
-              <span>الصيدلية الحالية: الصيدلية الرئيسية</span>
-            </div>
-            <span>▼</span>
-          </div>
+          <p class="text-center text-xs font-extrabold text-white/95 mt-2 relative z-10">نظام متكامل لإدارة الصيدليات والفروع</p>
         </div>
 
-        <!-- بطاقات الإحصائيات الأربع الكبرى (مطابقة للصورة) -->
-        <div class="grid grid-cols-2 gap-3">
-          <!-- مبيعات اليوم -->
-          <div class="bg-emerald-900 text-white p-4 rounded-3xl shadow-md flex flex-col justify-between relative overflow-hidden">
-            <div class="absolute -right-2 -bottom-2 opacity-10 text-6xl">📈</div>
-            <div class="flex justify-between items-start mb-3">
-              <span class="bg-emerald-800/80 p-2 rounded-2xl text-emerald-300 text-base"><i data-lucide="chart-no-axes-column-increasing"></i></span>
-            </div>
-            <div>
-              <p class="text-xs text-emerald-200 font-medium mb-0.5">مبيعات اليوم</p>
-              <h3 class="text-xl font-extrabold text-white" id="dash-sales">£1,245.50</h3>
-            </div>
+        <!-- شريط الصيدلية الحالية -->
+        <div class="branch-pill flex justify-between items-center text-xs font-extrabold">
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-800 flex items-center justify-center border border-emerald-200">
+              <i data-lucide="store" class="w-4 h-4"></i>
+            </span>
+            <span>الصيدلية الحالية: الصيدلية الرئيسية</span>
           </div>
-
-          <!-- عدد الأصناف -->
-          <div class="bg-emerald-700 text-white p-4 rounded-3xl shadow-md flex flex-col justify-between relative overflow-hidden">
-            <div class="absolute -right-2 -bottom-2 opacity-10 text-6xl">🏷️</div>
-            <div class="flex justify-between items-start mb-3">
-              <span class="bg-emerald-600/80 p-2 rounded-2xl text-white text-base"><i data-lucide="pill"></i></span>
-            </div>
-            <div>
-              <p class="text-xs text-emerald-100 font-medium mb-0.5">عدد الأصناف</p>
-              <h3 class="text-xl font-extrabold text-white" id="dash-items-count">2,860</h3>
-            </div>
-          </div>
-
-          <!-- منخفض المخزون -->
-          <div class="bg-amber-100/80 border border-amber-200 text-amber-900 p-4 rounded-3xl shadow-sm flex flex-col justify-between">
-            <div class="flex justify-between items-start mb-3">
-              <span class="bg-amber-200 p-2 rounded-2xl text-amber-700 text-base"><i data-lucide="package"></i></span>
-            </div>
-            <div>
-              <p class="text-[11px] text-amber-700 font-bold mb-0.5">منخفض المخزون</p>
-              <h3 class="text-base font-extrabold text-amber-900" id="dash-low-stock">23 صنفاً</h3>
-            </div>
-          </div>
-
-          <!-- قريب من الصلاحية -->
-          <div class="bg-amber-100/80 border border-amber-200 text-amber-900 p-4 rounded-3xl shadow-sm flex flex-col justify-between">
-            <div class="flex justify-between items-start mb-3">
-              <span class="bg-amber-200 p-2 rounded-2xl text-amber-700 text-base"><i data-lucide="triangle-alert"></i></span>
-            </div>
-            <div>
-              <p class="text-[11px] text-amber-700 font-bold mb-0.5">قريب من الصلاحية</p>
-              <h3 class="text-base font-extrabold text-amber-900" id="dash-near-expiry">18 صنفاً</h3>
-            </div>
-          </div>
+          <i data-lucide="chevron-down" class="w-4 h-4 text-emerald-800"></i>
         </div>
 
-        <!-- شبكة أزرار العمليات 4x3 المطابقة للصورة الأصلية تماماً -->
-        <div class="grid grid-cols-4 gap-2.5 text-center text-[11px] font-extrabold text-slate-700">
-          <button onclick="window.switchScreen('screen-pos')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-emerald-50 w-10 h-10 rounded-xl flex items-center justify-center text-emerald-600 shadow-inner"><i data-lucide="shopping-cart"></i></span>المبيعات
+        <div class="px-3.5 space-y-3">
+          <!-- البطاقات الإحصائية الأربع -->
+          <div class="grid grid-cols-2 gap-2.5">
+            <div class="stat-card stat-sales">
+              <i data-lucide="chart-no-axes-column-increasing" class="w-6 h-6 text-sky-200 mb-1"></i>
+              <p class="text-xs font-bold text-sky-100">مبيعات اليوم</p>
+              <h3 id="dash-sales" class="text-xl font-black mt-0.5">£1,245.50</h3>
+            </div>
+            <div class="stat-card stat-items">
+              <i data-lucide="pill" class="w-6 h-6 text-emerald-200 mb-1"></i>
+              <p class="text-xs font-bold text-emerald-100">عدد الأصناف</p>
+              <h3 id="dash-items-count" class="text-xl font-black mt-0.5">2,860</h3>
+            </div>
+            <div class="stat-card stat-warn">
+              <i data-lucide="package" class="w-6 h-6 text-amber-800 mb-1"></i>
+              <p class="text-xs font-extrabold text-amber-900">منخفض المخزون</p>
+              <h3 id="dash-low-stock" class="text-lg font-black text-amber-950 mt-0.5">23 صنفاً</h3>
+            </div>
+            <div class="stat-card stat-warn">
+              <i data-lucide="triangle-alert" class="w-6 h-6 text-amber-800 mb-1"></i>
+              <p class="text-xs font-extrabold text-amber-900">قريب من الصلاحية</p>
+              <h3 id="dash-near-expiry" class="text-lg font-black text-amber-950 mt-0.5">18 صنفاً</h3>
+            </div>
+          </div>
+
+          <!-- شبكة الاختصارات الـ 12 -->
+          <div class="grid grid-cols-4 gap-2">
+            <button onclick="window.switchScreen('screen-pos')" class="shortcut-btn">
+              <span class="shortcut-icon"><i data-lucide="printer" class="w-6 h-6"></i></span>المبيعات
+            </button>
+            <button onclick="window.showInvoices()" class="shortcut-btn">
+              <span class="shortcut-icon"><i data-lucide="file-text" class="w-6 h-6"></i></span>الفواتير
+            </button>
+            <button onclick="window.switchScreen('screen-inventory')" class="shortcut-btn">
+              <span class="shortcut-icon"><i data-lucide="pill" class="w-6 h-6"></i></span>الأدوية
+            </button>
+            <button onclick="window.switchScreen('screen-inventory')" class="shortcut-btn">
+              <span class="shortcut-icon"><i data-lucide="boxes" class="w-6 h-6"></i></span>المخزون
+            </button>
+            <button onclick="window.showPurchases()" class="shortcut-btn">
+              <span class="shortcut-icon"><i data-lucide="shopping-cart" class="w-6 h-6"></i></span>المشتريات
+            </button>
+            <button onclick="window.showSuppliers()" class="shortcut-btn">
+              <span class="shortcut-icon"><i data-lucide="truck" class="w-6 h-6"></i></span>الموردون
+            </button>
+            <button onclick="window.showReports()" class="shortcut-btn">
+              <span class="shortcut-icon"><i data-lucide="chart-no-axes-combined" class="w-6 h-6"></i></span>التقارير
+            </button>
+            <button onclick="window.showBranches()" class="shortcut-btn">
+              <span class="shortcut-icon"><i data-lucide="store" class="w-6 h-6"></i></span>الفروع
+            </button>
+            <button onclick="window.showEmployees()" class="shortcut-btn">
+              <span class="shortcut-icon"><i data-lucide="users" class="w-6 h-6"></i></span>الموظفون
+            </button>
+            <button onclick="window.showAdminLogin()" class="shortcut-btn">
+              <span class="shortcut-icon"><i data-lucide="settings" class="w-6 h-6"></i></span>الإعدادات
+            </button>
+            <button onclick="window.showBackupAndRestore()" class="shortcut-btn">
+              <span class="shortcut-icon"><i data-lucide="cloud-upload" class="w-6 h-6"></i></span>النسخ الاحتياطي
+            </button>
+            <button onclick="window.scanBarcode('pos')" class="shortcut-btn">
+              <span class="shortcut-icon"><i data-lucide="scan-barcode" class="w-6 h-6"></i></span>الباركود
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. شاشة الأدوية والمخزون -->
+      <div id="screen-inventory" class="screen-view hidden">
+        <div class="sub-header flex justify-between items-center">
+          <button onclick="window.switchScreen('screen-home')" class="p-2 rounded-xl bg-white/10">
+            <i data-lucide="chevron-right" class="w-6 h-6"></i>
           </button>
-          <button onclick="alert('شاشة الفواتير')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-blue-50 w-10 h-10 rounded-xl flex items-center justify-center text-blue-600 shadow-inner"><i data-lucide="file-text"></i></span>الفواتير
-          </button>
-          <button onclick="window.switchScreen('screen-inventory')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-purple-50 w-10 h-10 rounded-xl flex items-center justify-center text-purple-600 shadow-inner"><i data-lucide="pill"></i></span>الأدوية
-          </button>
-          <button onclick="window.switchScreen('screen-inventory')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-amber-50 w-10 h-10 rounded-xl flex items-center justify-center text-amber-600 shadow-inner"><i data-lucide="boxes"></i></span>المخزون
-          </button>
-          <button onclick="window.switchScreen('screen-add-product')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-indigo-50 w-10 h-10 rounded-xl flex items-center justify-center text-indigo-600 shadow-inner"><i data-lucide="shopping-basket"></i></span>المشتريات
-          </button>
-          <button onclick="alert('قسم الموردين')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-rose-50 w-10 h-10 rounded-xl flex items-center justify-center text-rose-600 shadow-inner"><i data-lucide="truck"></i></span>الموردون
-          </button>
-          <button onclick="alert('التقارير والأرباح')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-teal-50 w-10 h-10 rounded-xl flex items-center justify-center text-teal-600 shadow-inner"><i data-lucide="chart-no-axes-combined"></i></span>التقارير
-          </button>
-          <button onclick="alert('إدارة الفروع')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-cyan-50 w-10 h-10 rounded-xl flex items-center justify-center text-cyan-600 shadow-inner"><i data-lucide="store"></i></span>الفروع
-          </button>
-          <button onclick="alert('إدارة الموظفين والصلاحيات')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-emerald-50 w-10 h-10 rounded-xl flex items-center justify-center text-emerald-600 shadow-inner"><i data-lucide="users"></i></span>الموظفون
-          </button>
-          <button onclick="alert('الإعدادات العامة')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-slate-100 w-10 h-10 rounded-xl flex items-center justify-center text-slate-700 shadow-inner"><i data-lucide="settings"></i></span>الإعدادات
-          </button>
-          <button onclick="alert('النسخ الاحتياطي السحابي')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-sky-50 w-10 h-10 rounded-xl flex items-center justify-center text-sky-600 shadow-inner"><i data-lucide="cloud-upload"></i></span>النسخ الاحتياطي
-          </button>
-          <button onclick="alert('ماسح الباركود السريع')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center gap-1.5 hover:bg-slate-50 transition">
-            <span class="text-xl bg-violet-50 w-10 h-10 rounded-xl flex items-center justify-center text-violet-600 shadow-inner"><i data-lucide="scan-barcode"></i></span>الباركود
+          <div class="flex items-center gap-2">
+            <h2 class="text-xl font-black">الأدوية والمخزون</h2>
+            <i data-lucide="pill" class="w-6 h-6 text-amber-300"></i>
+          </div>
+          <div class="w-8"></div>
+        </div>
+
+        <div class="px-3.5 -mt-4 space-y-3">
+          <div class="bg-white rounded-2xl shadow-md px-3.5 py-2.5 flex items-center gap-2 border border-slate-200">
+            <i data-lucide="search" class="w-5 h-5 text-slate-400"></i>
+            <input id="inv-search" oninput="window.filterInventoryText(this.value)" type="text" placeholder="البحث عن دواء (الاسم أو الباركود)" class="flex-1 text-xs font-bold focus:outline-none bg-transparent">
+            <button onclick="window.scanBarcode('inv')" class="p-1.5 rounded-lg bg-emerald-50 text-emerald-800">
+              <i data-lucide="scan-barcode" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <div class="flex gap-2 overflow-x-auto text-xs font-extrabold">
+            <button onclick="window.filterInventory('all', this)" class="inv-filter-btn px-4 py-2 rounded-full bg-emerald-800 text-white shadow">الكل</button>
+            <button onclick="window.filterInventory('low_stock', this)" class="inv-filter-btn px-4 py-2 rounded-full bg-white text-slate-700 border border-slate-200">منخفض المخزون</button>
+            <button onclick="window.filterInventory('near_expiry', this)" class="inv-filter-btn px-4 py-2 rounded-full bg-white text-slate-700 border border-slate-200">قريب من الصلاحية</button>
+          </div>
+
+          <div id="inventory-cards-container" class="space-y-2.5"></div>
+
+          <button onclick="window.switchScreen('screen-add-product')" class="gold-cta w-full py-3.5 text-base flex items-center justify-center gap-2 mt-2">
+            <span>+ إضافة دواء جديد</span>
           </button>
         </div>
       </div>
 
-      <!-- 2. شاشة الأدوية والمخزون (مطابقة للشاشة اليسرى في الصورة تماماً) -->
-      <div id="screen-inventory" class="screen-view hidden p-4 space-y-4">
-        <div class="flex justify-between items-center bg-emerald-700 text-white p-4 rounded-2xl shadow-sm">
-          <button onclick="window.switchScreen('screen-home')" class="font-bold text-sm bg-emerald-600 px-3 py-1 rounded-xl">◀ العودة</button>
-          <h2 class="font-extrabold text-base">الأدوية والمخزون</h2>
-          <button onclick="window.switchScreen('screen-add-product')" class="bg-white text-emerald-700 px-3 py-1.5 rounded-xl text-xs font-extrabold shadow">+ إضافة</button>
-        </div>
-
-        <!-- شريط البحث السريع والفلترة -->
-        <div class="space-y-2">
-          <div class="relative">
-            <input type="text" placeholder="🔍 البحث عن دواء (الاسم أو الباركود)" class="w-full bg-white border border-slate-200 p-3 rounded-2xl text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+      <!-- 3. شاشة المبيعات (نقطة البيع) -->
+      <div id="screen-pos" class="screen-view hidden">
+        <div class="sub-header flex justify-between items-center">
+          <button onclick="window.switchScreen('screen-home')" class="p-2 rounded-xl bg-white/10">
+            <i data-lucide="chevron-right" class="w-6 h-6"></i>
+          </button>
+          <div class="flex items-center gap-2">
+            <h2 class="text-xl font-black">المبيعات (نقطة البيع)</h2>
+            <i data-lucide="shopping-cart" class="w-6 h-6 text-amber-300"></i>
           </div>
-          <div class="flex gap-2 overflow-x-auto pb-1 text-xs">
-            <button onclick="window.filterInventory('all', this)" class="inv-filter-btn px-4 py-1.5 rounded-full font-bold bg-emerald-600 text-white shadow">الكل</button>
-            <button onclick="window.filterInventory('low_stock', this)" class="inv-filter-btn px-4 py-1.5 rounded-full font-bold bg-white text-slate-600 shadow-sm border border-slate-100">منخفض المخزون</button>
-            <button onclick="window.filterInventory('near_expiry', this)" class="inv-filter-btn px-4 py-1.5 rounded-full font-bold bg-white text-slate-600 shadow-sm border border-slate-100">قريب من الصلاحية</button>
-          </div>
+          <div class="w-8"></div>
         </div>
 
-        <!-- قائمة كاردات الأدوية -->
-        <div class="space-y-3" id="inventory-cards-container">
-          <!-- Dynamically generated -->
-        </div>
-      </div>
-
-      <!-- 3. شاشة نقطة البيع والمبيعات (مطابقة للشاشة اليمنى في الصورة تماماً) -->
-      <div id="screen-pos" class="screen-view hidden p-4 space-y-4">
-        <div class="flex justify-between items-center bg-emerald-700 text-white p-4 rounded-2xl shadow-sm">
-          <button onclick="window.switchScreen('screen-home')" class="font-bold text-sm bg-emerald-600 px-3 py-1 rounded-xl">◀ العودة</button>
-          <h2 class="font-extrabold text-base">المبيعات (نقطة البيع)</h2>
-          <span>🛒</span>
-        </div>
-
-        <div class="relative">
-          <input type="text" placeholder="🔍 البحث عن دواء أو مسح الباركود..." class="w-full bg-white border border-slate-200 p-3 rounded-2xl text-xs shadow-sm focus:outline-none">
-        </div>
-
-        <div class="bg-white p-4 rounded-3xl shadow-sm space-y-4">
-          <h3 class="font-extrabold text-sm text-slate-800 border-b pb-2">عناصر السلة الحالية</h3>
-          <div id="cart-items-container" class="space-y-3 max-h-72 overflow-y-auto pr-1">
-            <p class="text-slate-400 text-sm text-center py-12">السلة فارغة حالياً...</p>
-          </div>
-          
-          <div class="border-t pt-3 space-y-2 text-sm bg-slate-50 p-3 rounded-2xl">
-            <div class="flex justify-between text-slate-500 text-xs"><span>الإجمالي الفرعي:</span><span id="cart-subtotal" class="font-bold">£0.00</span></div>
-            <div class="flex justify-between text-slate-500 text-xs"><span>الخصم:</span><span class="font-bold">£0.00 🏷️</span></div>
-            <div class="flex justify-between font-extrabold text-base text-slate-900 pt-2 border-t"><span>الإجمالي النهائي:</span><span id="cart-final-total" class="text-emerald-600 text-xl">£0.00</span></div>
+        <div class="px-3.5 -mt-4 space-y-3">
+          <div class="bg-white rounded-2xl shadow-md px-3.5 py-2.5 flex items-center gap-2 border border-slate-200 relative">
+            <i data-lucide="search" class="w-5 h-5 text-slate-400"></i>
+            <input id="pos-search" oninput="window.searchPosQuick(this.value)" type="text" placeholder="البحث عن دواء أو مسح الباركود" class="flex-1 text-xs font-bold focus:outline-none bg-transparent">
+            <button onclick="window.scanBarcode('pos')" class="p-1.5 rounded-lg bg-emerald-50 text-emerald-800">
+              <i data-lucide="scan-barcode" class="w-5 h-5"></i>
+            </button>
+            <div id="pos-quick-results" class="hidden absolute top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-xl border border-slate-200 z-30 max-h-48 overflow-y-auto"></div>
           </div>
 
-          <button onclick="window.checkout()" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-3.5 rounded-2xl font-extrabold shadow-lg transition flex items-center justify-center gap-2 text-sm">
-            🛒 إتمام البيع وإصدار الفاتورة
+          <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200 space-y-3">
+            <div id="cart-items-container" class="space-y-2.5 max-h-72 overflow-y-auto"></div>
+
+            <div class="border-t border-slate-100 pt-3 space-y-2 text-xs font-extrabold">
+              <div class="flex justify-between text-slate-600">
+                <span>الإجمالي الفرعي</span>
+                <span id="cart-subtotal">£0.00</span>
+              </div>
+              <div class="flex justify-between items-center text-slate-600">
+                <span class="flex items-center gap-1"><i data-lucide="tag" class="w-3.5 h-3.5 text-emerald-700"></i> الخصم</span>
+                <input id="pos-discount" oninput="window.renderCart()" type="number" min="0" step="0.5" value="0" class="w-20 text-left bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 font-extrabold">
+              </div>
+              <div class="bg-gradient-to-l from-amber-100 to-amber-200/80 rounded-xl px-3.5 py-2.5 flex justify-between items-center border border-amber-300">
+                <span class="text-sm font-black text-emerald-950 flex items-center gap-1.5">
+                  <i data-lucide="coins" class="w-5 h-5 text-amber-700"></i> الإجمالي النهائي
+                </span>
+                <span id="cart-final-total" class="text-xl font-black text-emerald-950">£0.00</span>
+              </div>
+            </div>
+          </div>
+
+          <button onclick="window.checkout()" class="gold-cta w-full py-3.5 text-base flex items-center justify-center gap-2">
+            <i data-lucide="shopping-cart" class="w-5 h-5"></i>
+            <span>إتمام البيع وإصدار الفاتورة</span>
           </button>
         </div>
       </div>
 
       <!-- 4. شاشة إضافة دواء جديد -->
-      <div id="screen-add-product" class="screen-view hidden p-4 space-y-4">
-        <div class="flex justify-between items-center bg-emerald-700 text-white p-4 rounded-2xl shadow-sm">
-          <button onclick="window.switchScreen('screen-home')" class="font-bold text-sm bg-emerald-600 px-3 py-1 rounded-xl">◀ العودة</button>
-          <h2 class="font-extrabold text-base">إضافة دواء جديد</h2>
-          <span>📦</span>
+      <div id="screen-add-product" class="screen-view hidden">
+        <div class="sub-header flex justify-between items-center">
+          <button onclick="window.switchScreen('screen-inventory')" class="p-2 rounded-xl bg-white/10">
+            <i data-lucide="chevron-right" class="w-6 h-6"></i>
+          </button>
+          <h2 class="text-xl font-black">إضافة دواء جديد</h2>
+          <div class="w-8"></div>
         </div>
-        <form id="add-product-form" onsubmit="window.addNewProduct(event)" class="bg-white p-5 rounded-3xl shadow-sm space-y-3">
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">اسم الدواء التجاري</label>
-            <input type="text" id="new-name" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-xs">
+        <form id="add-product-form" onsubmit="window.addNewProduct(event)" class="p-4 space-y-3">
+          <div class="bg-white p-4 rounded-2xl shadow-sm space-y-3 border border-slate-200">
+            <div>
+              <label class="block text-xs font-extrabold mb-1">اسم الدواء التجاري</label>
+              <input type="text" id="new-name" required placeholder="مثال: بانادول 500 مجم" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold">
+            </div>
+            <div>
+              <label class="block text-xs font-extrabold mb-1">الاسم العلمي (Generic)</label>
+              <input type="text" id="new-generic" required placeholder="Paracetamol 500 mg" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold">
+            </div>
+            <div>
+              <label class="block text-xs font-extrabold mb-1">الباركود</label>
+              <div class="flex gap-2">
+                <input type="text" id="new-barcode" required placeholder="امسح أو اكتب الباركود" class="flex-1 bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold">
+                <button type="button" onclick="window.scanBarcode('new')" class="px-3.5 rounded-xl bg-emerald-800 text-white font-bold">
+                  <i data-lucide="scan-barcode" class="w-5 h-5"></i>
+                </button>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="block text-xs font-extrabold mb-1">سعر البيع (£)</label>
+                <input type="number" step="0.01" id="new-price" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold">
+              </div>
+              <div>
+                <label class="block text-xs font-extrabold mb-1">الكمية بالمخزون</label>
+                <input type="number" id="new-qty" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-extrabold mb-1">تاريخ انتهاء الصلاحية</label>
+              <input type="date" id="new-expiry" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold">
+            </div>
           </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">الاسم العلمي (Generic)</label>
-            <input type="text" id="new-generic" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-xs">
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">الباركود</label>
-            <input type="text" id="new-barcode" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-xs">
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">تاريخ انتهاء الصلاحية</label>
-            <input type="date" id="new-expiry" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-xs">
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">سعر البيع (£)</label>
-            <input type="number" step="0.01" id="new-price" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-xs">
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">الكمية بالمخزون</label>
-            <input type="number" id="new-qty" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-2xl text-xs">
-          </div>
-          <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-2xl font-extrabold shadow text-sm">حفظ الدواء في السحابة 📥</button>
+          <button type="submit" class="gold-cta w-full py-3.5 text-base">حفظ الدواء في المخزون</button>
         </form>
       </div>
 
     </div>
 
-    <!-- شريط التنقل السفلي الثابت المطابق للصورة الأصلية تماماً -->
-    <nav class="absolute bottom-0 left-0 right-0 bg-slate-900 text-white py-3 px-6 flex justify-between items-center text-[11px] font-bold border-t border-slate-800 shadow-2xl z-50">
-      <button onclick="window.switchScreen('screen-home')" id="nav-home" class="nav-btn flex flex-col items-center gap-1 text-amber-400 transition">
-        <span class="text-base"><i data-lucide="house"></i></span>الرئيسية
+    <!-- شريط التنقل السفلي -->
+    <nav class="bottom-nav fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto flex justify-between items-center text-[11px] font-extrabold z-40">
+      <button onclick="window.switchScreen('screen-home')" id="nav-home" class="nav-btn flex flex-col items-center gap-1 text-amber-300">
+        <i data-lucide="house" class="w-5 h-5"></i><span>الرئيسية</span>
       </button>
-      <button onclick="window.switchScreen('screen-pos')" id="nav-pos" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-white transition">
-        <span class="text-base"><i data-lucide="shopping-cart"></i></span>المبيعات
+      <button onclick="window.switchScreen('screen-pos')" id="nav-pos" class="nav-btn flex flex-col items-center gap-1 text-white/85">
+        <i data-lucide="shopping-cart" class="w-5 h-5"></i><span>المبيعات</span>
       </button>
-      <button onclick="window.switchScreen('screen-inventory')" id="nav-inv" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-white transition">
-        <span class="text-base"><i data-lucide="boxes"></i></span>المخزون
+      <button onclick="window.switchScreen('screen-inventory')" id="nav-inv" class="nav-btn flex flex-col items-center gap-1 text-white/85">
+        <i data-lucide="boxes" class="w-5 h-5"></i><span>المخزون</span>
       </button>
-      <button onclick="alert('قسم التقارير والأرباح المالية')" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-white transition">
-        <span class="text-base"><i data-lucide="chart-no-axes-column-increasing"></i></span>التقارير
+      <button onclick="window.showReports()" class="nav-btn flex flex-col items-center gap-1 text-white/85">
+        <i data-lucide="chart-no-axes-column-increasing" class="w-5 h-5"></i><span>التقارير</span>
       </button>
-      <button onclick="alert('خيارات إضافية للمزيد')" class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-white transition">
-        <span class="text-base">⋯</span>المزيد
+      <button onclick="window.showBackupAndRestore()" class="nav-btn flex flex-col items-center gap-1 text-white/85">
+        <i data-lucide="ellipsis" class="w-5 h-5"></i><span>المزيد</span>
       </button>
     </nav>
-
   </div>
+
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-<script>document.addEventListener("DOMContentLoaded",()=>{if(window.lucide)lucide.createIcons()});</script>
-<script type="module" src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
