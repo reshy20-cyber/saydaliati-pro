@@ -6,6 +6,8 @@
   <title>صيدليتي PRO | SAYDALIATI</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- مكتبة Html5Qrcode المتوافقة مع جميع المتصفحات بما فيها Safari على iOS -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" type="text/javascript"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#003a2c">
   <style>
@@ -21,7 +23,6 @@
     @media (min-width: 500px) {
       .app-shell { margin: 16px auto; min-height: 850px; border-radius: 36px; border: 4px solid #003a2c; overflow: hidden; }
     }
-    /* Branded Header matching reference image */
     .hero-header {
       position: relative;
       background: linear-gradient(145deg, #003a2c 0%, #00533b 65%, #00683e 100%);
@@ -113,7 +114,7 @@
               </div>
             </div>
 
-            <button onclick="window.showAdminLogin()" title="حساب المدير والإعدادات" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+            <button onclick="window.showAdminLogin()" title="إعدادات الترخيص" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
               <i data-lucide="menu" class="w-6 h-6 text-amber-200"></i>
             </button>
           </div>
@@ -315,7 +316,7 @@
             </div>
             <div class="grid grid-cols-2 gap-2.5">
               <div>
-                <label class="block text-xs font-extrabold mb-1">سعر البيع (£)</label>
+                <label class="block text-xs font-extrabold mb-1">سعر البيع</label>
                 <input type="number" step="0.01" id="new-price" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold">
               </div>
               <div>

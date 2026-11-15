@@ -26,8 +26,6 @@ function getActiveBranchId() {
   return localStorage.getItem(BRANCH_STORAGE_KEY) || 'main_branch';
 }
 
-const DEMO_INVENTORY = [];
-
 let state = { salesTotal: 0, dailySales: {}, inventory: [] };
 let cart = [];
 let checkoutInProgress = false;
@@ -149,7 +147,6 @@ export function initCloudSync() {
 
 function validateLicenseFormat(rawKey) {
   const cleaned = rawKey.trim().toUpperCase();
-  // يقبل أكواد الترخيص بصيغة SYD-XXXX-XXXX-XXXX أو الأكواد المعتمدة في السحابة
   return /^SYD-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(cleaned) || cleaned === 'SAYDALIATI-PRO-2026';
 }
 
@@ -207,7 +204,7 @@ function showAdminLogin() {
 
     const keyInput = document.createElement('input');
     keyInput.type = 'text';
-    keyInput.placeholder = 'كود الترخيص (مثال: SYD-2026-PRO1-9988)';
+    keyInput.placeholder = 'كود الترخيص (مثال: SAYDALIATI-PRO-2026)';
     keyInput.dir = 'ltr';
 
     for (const input of [pharmacyInput, keyInput]) {
@@ -230,7 +227,6 @@ function showAdminLogin() {
         let validRemote = false;
         let branchId = 'branch_' + rawKey.replace(/[^A-Z0-9]/g, '').toLowerCase();
 
-        // التحقق السحابي إذا كان الإنترنت متصلاً
         if (navigator.onLine) {
           try {
             await signInAnonymously(auth).catch(() => {});
@@ -247,7 +243,7 @@ function showAdminLogin() {
         }
 
         if (!validRemote && !validateLicenseFormat(rawKey)) {
-          throw Error('كود الترخيص غير صحيح. تأكد من كتابته بصيغة SYD-XXXX-XXXX-XXXX');
+          throw Error('كود الترخيص غير صحيح. تأكد من كتابته بصيغة SYD-XXXX-XXXX-XXXX أو SAYDALIATI-PRO-2026');
         }
 
         localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify({
@@ -314,9 +310,7 @@ function bootstrapLicenseSession() {
   }
 }
 
-onAuthStateChanged(auth, () => {
-  // الجلسة تُدار عبر كود الترخيص المعتمد محلياً وسحابياً
-});
+onAuthStateChanged(auth, () => {});
 
 function updateUI() {
   const sales = Number(state.dailySales?.[todayLocal()]) || 0;
@@ -344,7 +338,7 @@ function renderInventoryList(items, filter = 'all') {
 
   container.innerHTML = '';
   if (!filtered.length) {
-    container.innerHTML = '<div class="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-400 text-xs font-bold">لا توجد أصناف في المخزون حالياً. سجّل دخول المدير أو أضف دواءً جديداً.</div>';
+    container.innerHTML = '<div class="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-400 text-xs font-bold">لا توجد أصناف في المخزون حالياً. فعّل الترخيص أو أضف دواءً جديداً.</div>';
     return;
   }
   for (const item of filtered) {
@@ -385,14 +379,13 @@ window.filterInventory = (type, btn) => {
   renderInventoryList(state.inventory, type);
 };
 
-// --- تحسين أداء البحث في المخزون (Optimized & Debounced Search) ---
 let searchDebounceTimer = null;
 window.filterInventoryText = val => {
   clearTimeout(searchDebounceTimer);
   searchDebounceTimer = setTimeout(() => {
     invSearchQuery = val;
     renderInventoryList(state.inventory, activeInventoryFilter);
-  }, 150); // تأخير زمني خفيف (150ms) لمنع إعادة الرسم المفرط أثناء الكتابة السريعة
+  }, 150);
 };
 
 window.switchScreen = screenId => {
@@ -502,7 +495,6 @@ window.renderCart = function renderCart() {
   if (window.lucide) window.lucide.createIcons();
 };
 
-// Electronic Invoice Modal with QR Code + PDF Print + WhatsApp Share
 function showElectronicInvoice(invoice) {
   document.getElementById('saydaliati-invoice-modal')?.remove();
   const overlay = document.createElement('div');
@@ -567,7 +559,6 @@ window.checkout = async () => {
 
   const discount = Math.max(0, Number(document.getElementById('pos-discount')?.value) || 0);
 
-  // Demo mode local checkout if not logged in to Firebase yet
   if (!authenticatedAdmin) {
     const subtotal = cart.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
     const total = Math.max(0, Math.round((subtotal - discount) * 100) / 100);
@@ -701,44 +692,100 @@ window.addNewProduct = async e => {
   }
 };
 
+let activeHtml5QrScanner = null;
+
 async function scanBarcode(target = 'pos') {
-  if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia) {
-    const manual = prompt('الكاميرا غير مدعومة في هذا المتصفح. أدخل رقم الباركود يدوياً:');
-    if (manual) handleScannedCode(manual.trim(), target);
-    return;
-  }
-  let stream, raf;
+  document.getElementById('saydaliati-scanner-modal')?.remove();
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#000e;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;color:white';
-  const video = document.createElement('video');
-  video.autoplay = true; video.playsInline = true;
-  video.style.cssText = 'width:100%;max-width:390px;border-radius:18px;border:2px solid #f4c66c';
-  const close = document.createElement('button');
-  close.textContent = 'إغلاق الكاميرا';
-  close.style.cssText = 'background:#006b3d;padding:12px 26px;border-radius:12px;font-weight:800';
-  const stop = () => { cancelAnimationFrame(raf); stream?.getTracks().forEach(t => t.stop()); overlay.remove(); };
-  close.onclick = stop;
-  overlay.append(video, close);
+  overlay.id = 'saydaliati-scanner-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:10005;background:rgba(0,27,21,0.88);display:grid;place-items:center;padding:16px;direction:rtl';
+
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#fff;width:min(100%,380px);border-radius:24px;padding:20px;box-shadow:0 24px 48px rgba(0,0,0,0.4);display:grid;gap:12px;text-align:center';
+
+  const title = document.createElement('h3');
+  title.textContent = 'مسح الباركود بالكاميرا';
+  title.style.cssText = 'font-size:18px;font-weight:900;color:#004634;margin:0';
+
+  const readerContainer = document.createElement('div');
+  readerContainer.id = 'reader-container-modal';
+  readerContainer.style.cssText = 'width:100%;min-height:240px;background:#000;border-radius:14px;overflow:hidden';
+
+  const manualWrap = document.createElement('div');
+  manualWrap.style.cssText = 'display:grid;gap:6px;text-align:right';
+  manualWrap.innerHTML = '<label style="font-size:11px;font-weight:800;color:#475569">أو أدخل رقم الباركود يدوياً:</label>';
+  
+  const manualInputRow = document.createElement('div');
+  manualInputRow.style.cssText = 'display:flex;gap:8px';
+  const manualInput = document.createElement('input');
+  manualInput.type = 'text';
+  manualInput.placeholder = 'أدخل الباركود هنا...';
+  manualInput.style.cssText = 'flex:1;padding:10px;border:1px solid #cbd5e1;border-radius:10px;font-size:12px;font-weight:700';
+  const manualBtn = document.createElement('button');
+  manualBtn.textContent = 'تأكيد';
+  manualBtn.style.cssText = 'background:#006b3d;color:white;padding:10px 16px;border-radius:10px;font-weight:800;font-size:12px';
+  
+  manualInputRow.append(manualInput, manualBtn);
+  manualWrap.append(manualInputRow);
+
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = 'إغلاق الكاميرا';
+  closeBtn.style.cssText = 'background:#991b1b;color:white;padding:11px;border-radius:12px;font-weight:800;font-size:13px;width:100%';
+
+  box.append(title, readerContainer, manualWrap, closeBtn);
+  overlay.append(box);
   document.body.append(overlay);
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-    video.srcObject = stream;
-    await video.play();
-    const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'] });
-    let busy = false;
-    const frame = async () => {
-      if (!overlay.isConnected) return;
-      if (!busy && video.readyState >= 2) {
-        busy = true;
-        try {
-          const found = await detector.detect(video);
-          if (found.length) { handleScannedCode(found[0].rawValue, target); stop(); return; }
-        } finally { busy = false; }
+
+  const stopScanner = async () => {
+    try {
+      if (activeHtml5QrScanner) {
+        await activeHtml5QrScanner.stop();
+        activeHtml5QrScanner.clear();
+        activeHtml5QrScanner = null;
       }
-      raf = requestAnimationFrame(frame);
-    };
-    raf = requestAnimationFrame(frame);
-  } catch (e) { stop(); alert('تعذر تشغيل الكاميرا'); }
+    } catch (e) {}
+    overlay.remove();
+  };
+
+  closeBtn.onclick = stopScanner;
+
+  manualBtn.onclick = () => {
+    const val = manualInput.value.trim();
+    if (val) {
+      stopScanner();
+      handleScannedCode(val, target);
+    }
+  };
+  manualInput.onkeypress = e => {
+    if (e.key === 'Enter') {
+      const val = manualInput.value.trim();
+      if (val) {
+        stopScanner();
+        handleScannedCode(val, target);
+      }
+    }
+  };
+
+  setTimeout(async () => {
+    try {
+      if (typeof Html5Qrcode === 'undefined') {
+        throw Error('مكتبة المسح غير متوفرة');
+      }
+      activeHtml5QrScanner = new Html5Qrcode('reader-container-modal');
+      await activeHtml5QrScanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 220, height: 130 } },
+        decodedText => {
+          stopScanner();
+          handleScannedCode(decodedText, target);
+        },
+        () => {}
+      );
+    } catch (e) {
+      console.warn('تعذر تشغيل كاميرا Html5Qrcode:', e);
+      manualInput.focus();
+    }
+  }, 200);
 }
 
 function handleScannedCode(code, target) {
@@ -757,7 +804,6 @@ function handleScannedCode(code, target) {
 }
 window.scanBarcode = scanBarcode;
 
-// Administrative Overlays (Invoices, Returns, Reports, Suppliers, Purchases, Employees, Branches, Backup/Restore)
 function adminPanel(title) {
   document.getElementById('saydaliati-admin-panel')?.remove();
   const overlay = document.createElement('div');
@@ -921,7 +967,7 @@ async function showEmployees() {
 async function showBranches() {
   if (!requireAdmin() || !requireOnlineWrite()) return;
   const { panel } = adminPanel('إدارة الفروع');
-  adminText(panel, 'الفرع النشط حالياً: الصيدلية الرئيسية (main_branch)');
+  adminText(panel, 'الفرع النشط حالياً: الصيدلية الرئيسية');
   const name = adminField(panel, 'اسم فرع إضافي');
   const status = adminText(panel, '');
   adminButton(panel, 'إضافة سجل فرع', async () => {
@@ -968,8 +1014,6 @@ document.addEventListener('click', event => {
 window.addEventListener('offline', () => { serverVerified = false; syncStatus('دون إنترنت — وضع العمل المحلي', false); });
 window.addEventListener('online', () => { if (authenticatedAdmin) initCloudSync(); });
 
-
-// --- تفعيل وإدارة صلاحيات الكاميرا والتخزين المحلي المستمر (V5.1) ---
 const LOCAL_INV_CACHE_KEY = 'saydaliati_local_inventory_cache_v1';
 const LOCAL_META_CACHE_KEY = 'saydaliati_local_meta_cache_v1';
 
@@ -983,9 +1027,7 @@ function saveLocalSnapshot() {
         updatedAt: new Date().toISOString()
       }));
     }
-  } catch (e) {
-    console.warn('تعذر الحفظ في التخزين المحلي:', e);
-  }
+  } catch (e) {}
 }
 
 function loadLocalSnapshot() {
@@ -1003,9 +1045,7 @@ function loadLocalSnapshot() {
         state.dailySales = parsedMeta.dailySales || state.dailySales;
       }
     }
-  } catch (e) {
-    console.warn('تعذر قراءة التخزين المحلي:', e);
-  }
+  } catch (e) {}
 }
 
 async function requestCameraAndStoragePermissions() {
@@ -1027,42 +1067,30 @@ async function requestCameraAndStoragePermissions() {
       storageStatus = persisted ? 'تخزين دائم محمي من المسح التلقائي ✓' : 'تخزين محلي نشط ✓';
     }
     saveLocalSnapshot();
-  } catch (e) {
-    storageStatus = 'تخزين محلي أساسي';
-  }
+  } catch (e) {}
 
   alert(`حالة الصلاحيات في الجهاز:\n\n📷 صلاحية الكاميرا (للباركود): ${camStatus}\n💾 صلاحية التخزين المحلي: ${storageStatus}`);
 }
 window.requestCameraAndStoragePermissions = requestCameraAndStoragePermissions;
 
-// تحميل النسخة المحلية فوراً عند فتح التطبيق وقبل اكتمال الاتصال السحابي
 loadLocalSnapshot();
 window.addEventListener('beforeunload', saveLocalSnapshot);
 setInterval(saveLocalSnapshot, 15000);
 
-
-// --- إدارة العملة والدولة (Currency & Regional Settings) ---
 let currentCurrency = localStorage.getItem('saydaliati_currency_symbol') || 'جنيه';
-
-function getCurrencySymbol() {
-  return currentCurrency;
-}
-
+function getCurrencySymbol() { return currentCurrency; }
 function setCurrencySymbol(symbol) {
   currentCurrency = symbol;
   localStorage.setItem('saydaliati_currency_symbol', symbol);
   updateUI();
-  // إذا كان المدير مسجلاً، يمكننا حفظ إعداد العملة في مستند الصيدلية السحابي أيضاً
 }
 window.getCurrencySymbol = getCurrencySymbol;
 window.setCurrencySymbol = setCurrencySymbol;
-
 
 async function showCurrencySettings() {
   if (!requireAdmin()) return;
   const { panel } = adminPanel('إعدادات العملة والدولة');
   adminText(panel, 'اختر العملة الرسمية لصيدليتك أو فرعك:');
-  
   const currencies = [
     { name: 'الجنيه المصري (EGP - ج.م)', symbol: 'ج.م' },
     { name: 'الريال السعودي (SAR - ر.س)', symbol: 'ر.س' },
@@ -1073,7 +1101,6 @@ async function showCurrencySettings() {
     { name: 'الليرة اللبنانية (LBP - ل.ل)', symbol: 'ل.ل' },
     { name: 'العملة الافتراضية (£)', symbol: '£' }
   ];
-
   for (const c of currencies) {
     adminButton(panel, `اعتماد: ${c.name}`, () => {
       setCurrencySymbol(c.symbol);
