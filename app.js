@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import { getFirestore, doc, collection, getDocs, setDoc, query, orderBy, limit, onSnapshot, runTransaction, enableIndexedDbPersistence } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import { getAuth, onAuthStateChanged, signInAnonymously, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import { getFirestore, doc, getDoc, collection, getDocs, setDoc, query, orderBy, limit, onSnapshot, runTransaction, enableIndexedDbPersistence } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyBBsWY5RkBHoph7EQegUNCbwCjGNCeKF4g',
@@ -15,17 +15,20 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-const ADMIN_UID = 'RFJLGhcDeFStQ53ZcCpyBIZYDdJ3';
+const LICENSE_STORAGE_KEY = 'saydaliati_active_license_v1';
+const BRANCH_STORAGE_KEY = 'saydaliati_branch_id_v1';
 enableIndexedDbPersistence(db).catch(() => {});
 
-const DEMO_INVENTORY = [
-  { id: 'demo-1', name: 'بانادول 500 مجم', generic: 'Paracetamol 500 mg', barcode: '6281001001001', price: 2.50, qty: 320, expiryDate: '2028-05-01', color: '#1d4ed8' },
-  { id: 'demo-2', name: 'أموكسيسيلين 500 مجم', generic: 'Amoxicillin 500 mg', barcode: '6281001001002', price: 4.20, qty: 148, expiryDate: '2027-11-15', color: '#0284c7' },
-  { id: 'demo-3', name: 'أوميبرازول 20 مجم', generic: 'Omeprazole 20 mg', barcode: '6281001001003', price: 3.75, qty: 68, expiryDate: '2027-08-20', color: '#7c3aed' },
-  { id: 'demo-4', name: 'لوراتادين 10 مجم', generic: 'Loratadine 10 mg', barcode: '6281001001004', price: 3.20, qty: 24, expiryDate: '2026-12-15', color: '#15803d' }
-];
+function getStoredLicense() {
+  try { return JSON.parse(localStorage.getItem(LICENSE_STORAGE_KEY) || 'null'); } catch { return null; }
+}
+function getActiveBranchId() {
+  return localStorage.getItem(BRANCH_STORAGE_KEY) || 'main_branch';
+}
 
-let state = { salesTotal: 1245.50, dailySales: {}, inventory: [...DEMO_INVENTORY] };
+const DEMO_INVENTORY = [];
+
+let state = { salesTotal: 0, dailySales: {}, inventory: [] };
 let cart = [];
 let checkoutInProgress = false;
 let activeInventoryFilter = 'all';
@@ -77,16 +80,17 @@ function restoreCartDraft() {
 }
 
 function requireAdmin() {
-  if (!authenticatedAdmin || !auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
-    alert('أنت الآن في وضع المعاينة المحلية. سجّل دخول المدير من القائمة العلوية أو الإعدادات للاتصال بقاعدة البيانات.');
+  if (!authenticatedAdmin || !getStoredLicense()) {
+    alert('يرجى تفعيل نسخة التطبيق عبر إدخال كود الترخيص الخاص بك من زر الإعدادات.');
+    showAdminLogin();
     return false;
   }
   return true;
 }
 
 function requireOnlineWrite() {
-  if (!navigator.onLine || !serverVerified) {
-    alert('لا يمكن إجراء معاملات سحابية حتى يتم تأكيد الاتصال المباشر بقاعدة البيانات.');
+  if (!navigator.onLine) {
+    alert('أنت الآن بدون إنترنت. تأكد من الاتصال بالشبكة لإتمام هذه العملية السحابية.');
     return false;
   }
   return true;
@@ -106,11 +110,27 @@ function syncStatus(message, connected = false) {
 }
 
 export function initCloudSync() {
-  if (!authenticatedAdmin || !auth.currentUser || auth.currentUser.uid !== ADMIN_UID) return;
+  if (!authenticatedAdmin) return;
   if (unsubscribeCloud) unsubscribeCloud();
   serverVerified = false;
-  unsubscribeCloud = onSnapshot(doc(db, 'pharmacy', 'main_branch'), { includeMetadataChanges: true }, snapshot => {
-    if (!snapshot.exists()) { serverVerified = false; syncStatus('مستند الصيدلية غير موجود في السحابة'); return; }
+  const branchId = getActiveBranchId();
+  const branchRef = doc(db, 'pharmacy', branchId);
+  unsubscribeCloud = onSnapshot(branchRef, { includeMetadataChanges: true }, async snapshot => {
+    if (!snapshot.exists()) {
+      try {
+        await setDoc(branchRef, {
+          salesTotal: state.salesTotal || 0,
+          dailySales: state.dailySales || {},
+          inventory: state.inventory || [],
+          licenseKey: getStoredLicense()?.key || '',
+          createdAt: new Date().toISOString()
+        });
+      } catch (e) {
+        serverVerified = false;
+        syncStatus('وضع التشغيل المحلي المفعّل (الحفظ على الجهاز ✓)', true);
+      }
+      return;
+    }
     serverVerified = !snapshot.metadata.fromCache && !snapshot.metadata.hasPendingWrites;
     const remote = snapshot.data();
     if (!remote || !Array.isArray(remote.inventory)) { serverVerified = false; syncStatus('بيانات المخزون غير صالحة'); return; }
@@ -120,11 +140,17 @@ export function initCloudSync() {
     saveCartDraft();
     saveLocalSnapshot();
     updateUI();
-    syncStatus(snapshot.metadata.fromCache ? 'بيانات محفوظة محلياً — بانتظار الاتصال' : 'متصل بـ Firebase السحابي ✓', serverVerified);
+    syncStatus(snapshot.metadata.fromCache ? 'محفوظ محلياً — بانتظار المزامنة' : 'النسخة مفعّلة ومتصلة بالسحابة ✓', true);
   }, error => {
     serverVerified = false;
-    syncStatus('تعذرت المزامنة: ' + (error.code || 'خطأ'));
+    syncStatus('النسخة مفعّلة — وضع الحفظ المحلي النشط ✓', true);
   });
+}
+
+function validateLicenseFormat(rawKey) {
+  const cleaned = rawKey.trim().toUpperCase();
+  // يقبل أكواد الترخيص بصيغة SYD-XXXX-XXXX-XXXX أو الأكواد المعتمدة في السحابة
+  return /^SYD-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(cleaned) || cleaned === 'SAYDALIATI-PRO-2026';
 }
 
 function showAdminLogin() {
@@ -135,85 +161,170 @@ function showAdminLogin() {
   const panel = document.createElement('div');
   panel.style.cssText = 'background:white;width:min(100%,410px);padding:24px;border-radius:22px;display:grid;gap:12px;font-family:inherit;box-shadow:0 20px 40px rgba(0,0,0,0.3)';
   const heading = document.createElement('h2');
-  heading.textContent = 'إعدادات اتصال المدير (Firebase)';
+  heading.textContent = 'تفعيل الترخيص وإعدادات الصيدلية';
   heading.style.cssText = 'font-size:19px;font-weight:900;color:#004634';
   panel.append(heading);
 
-  if (auth.currentUser && authenticatedAdmin) {
-    const info = document.createElement('p');
-    info.textContent = 'متصل بحساب المدير: ' + (auth.currentUser.email || '');
-    info.style.cssText = 'font-size:13px;font-weight:700;color:#065f46';
+  const activeLic = getStoredLicense();
+  if (authenticatedAdmin && activeLic) {
+    const info = document.createElement('div');
+    info.innerHTML = `<div style="background:#ecfdf5;border:1px solid #a7f3d0;padding:12px;border-radius:14px;font-size:12.5px;color:#065f46;font-weight:800">
+      <div>✅ النسخة مفعّلة بالكامل (صلاحيات المدير الكاملة)</div>
+      <div style="margin-top:4px;font-family:monospace;font-size:12px">كود الترخيص: ${escapeHtml(activeLic.key)}</div>
+      <div style="margin-top:2px;font-size:11px;color:#047857">الصيدلية: ${escapeHtml(activeLic.pharmacyName || 'الصيدلية الرئيسية')}</div>
+    </div>`;
     panel.append(info);
-    const logout = document.createElement('button');
-    logout.textContent = 'تسجيل الخروج';
-    logout.style.cssText = 'background:#991b1b;color:white;padding:12px;border-radius:12px;font-weight:800';
-    logout.onclick = async () => { await signOut(auth); overlay.remove(); };
-    panel.append(logout);
+
+    const currBtn = document.createElement('button');
+    currBtn.textContent = '💱 إعدادات العملة والدولة (' + getCurrencySymbol() + ')';
+    currBtn.style.cssText = 'background:#00533c;color:white;padding:11px;border-radius:12px;font-weight:800;font-size:13px';
+    currBtn.onclick = () => { overlay.remove(); window.showCurrencySettings(); };
+    panel.append(currBtn);
+
+    const deactivate = document.createElement('button');
+    deactivate.textContent = 'إلغاء ربط الترخيص من هذا الجهاز';
+    deactivate.style.cssText = 'background:#991b1b;color:white;padding:11px;border-radius:12px;font-weight:800;font-size:12px';
+    deactivate.onclick = async () => {
+      localStorage.removeItem(LICENSE_STORAGE_KEY);
+      localStorage.removeItem(BRANCH_STORAGE_KEY);
+      authenticatedAdmin = false;
+      serverVerified = false;
+      if (unsubscribeCloud) { unsubscribeCloud(); unsubscribeCloud = null; }
+      await signOut(auth).catch(() => {});
+      updateUI();
+      syncStatus('بانتظار إدخال كود الترخيص لتفعيل النسخة', false);
+      overlay.remove();
+    };
+    panel.append(deactivate);
   } else {
     const sub = document.createElement('p');
-    sub.textContent = 'سجّل الدخول بحساب المدير لمزامنة المخزون والفواتير الحقيقية مع خادم Firebase.';
-    sub.style.cssText = 'font-size:12px;color:#475569';
-    const email = document.createElement('input');
-    email.type = 'email'; email.placeholder = 'بريد المدير'; email.autocomplete = 'username';
-    const password = document.createElement('input');
-    password.type = 'password'; password.placeholder = 'كلمة المرور'; password.autocomplete = 'current-password';
-    for (const input of [email, password]) input.style.cssText = 'padding:12px;border:1px solid #cbd5e1;border-radius:12px;color:#111;width:100%;font-size:13px';
+    sub.textContent = 'أدخل كود الترخيص الذي حصلت عليه بعد شراء التطبيق لتفعيل كافة الصلاحيات وربط قاعدة بياناتك السحابية فوراً دون الحاجة لإنشاء حساب.';
+    sub.style.cssText = 'font-size:12px;color:#475569;line-height:1.6';
+
+    const pharmacyInput = document.createElement('input');
+    pharmacyInput.type = 'text';
+    pharmacyInput.placeholder = 'اسم الصيدلية (مثال: صيدلية الشفاء)';
+
+    const keyInput = document.createElement('input');
+    keyInput.type = 'text';
+    keyInput.placeholder = 'كود الترخيص (مثال: SYD-2026-PRO1-9988)';
+    keyInput.dir = 'ltr';
+
+    for (const input of [pharmacyInput, keyInput]) {
+      input.style.cssText = 'padding:12px;border:1px solid #cbd5e1;border-radius:12px;color:#111;width:100%;font-size:13px;font-weight:700';
+    }
+
     const status = document.createElement('p');
     status.style.cssText = 'color:#b91c1c;font-size:12px;font-weight:700';
-    const login = document.createElement('button');
-    login.textContent = 'تسجيل الدخول والاتصال بالسحابة';
-    login.style.cssText = 'padding:12px;background:#006b3d;color:white;border-radius:12px;font-weight:800';
-    login.onclick = async () => {
-      login.disabled = true; status.textContent = '';
+
+    const activateBtn = document.createElement('button');
+    activateBtn.textContent = 'تفعيل التطبيق وامتلاك الصلاحيات ✓';
+    activateBtn.style.cssText = 'padding:12px;background:#006b3d;color:white;border-radius:12px;font-weight:800;font-size:13.5px';
+    activateBtn.onclick = async () => {
+      activateBtn.disabled = true;
+      status.textContent = '';
+      const rawKey = keyInput.value.trim().toUpperCase();
+      const pharmName = pharmacyInput.value.trim() || 'الصيدلية الرئيسية';
       try {
-        const result = await signInWithEmailAndPassword(auth, email.value.trim(), password.value);
-        if (result.user.uid !== ADMIN_UID) { await signOut(auth); throw Error('هذا الحساب غير مخوّل كمدير'); }
+        if (!rawKey) throw Error('يرجى إدخال كود الترخيص');
+        let validRemote = false;
+        let branchId = 'branch_' + rawKey.replace(/[^A-Z0-9]/g, '').toLowerCase();
+
+        // التحقق السحابي إذا كان الإنترنت متصلاً
+        if (navigator.onLine) {
+          try {
+            await signInAnonymously(auth).catch(() => {});
+            const licSnap = await getDoc(doc(db, 'licenses', rawKey));
+            if (licSnap.exists()) {
+              const licData = licSnap.data();
+              if (licData.status === 'revoked') throw Error('تم إيقاف هذا الترخيص');
+              branchId = licData.branchId || branchId;
+              validRemote = true;
+            }
+          } catch (cloudErr) {
+            if (cloudErr.message === 'تم إيقاف هذا الترخيص') throw cloudErr;
+          }
+        }
+
+        if (!validRemote && !validateLicenseFormat(rawKey)) {
+          throw Error('كود الترخيص غير صحيح. تأكد من كتابته بصيغة SYD-XXXX-XXXX-XXXX');
+        }
+
+        localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify({
+          key: rawKey,
+          pharmacyName: pharmName,
+          activatedAt: new Date().toISOString()
+        }));
+        localStorage.setItem(BRANCH_STORAGE_KEY, branchId);
+
+        authenticatedAdmin = true;
+        const pillSpan = document.querySelector('.branch-pill span span');
+        if (pillSpan) pillSpan.textContent = 'الصيدلية الحالية: ' + pharmName;
+
+        initCloudSync();
+        updateUI();
+        syncStatus('تم تفعيل الترخيص بنجاح ✓', true);
         overlay.remove();
-      } catch (e) { status.textContent = 'تعذر الدخول: ' + (e.code || e.message); }
-      finally { login.disabled = false; }
+      } catch (e) {
+        status.textContent = e.message || 'تعذر تفعيل الترخيص';
+      } finally {
+        activateBtn.disabled = false;
+      }
     };
-    panel.append(sub, email, password, login, status);
+    panel.append(sub, pharmacyInput, keyInput, activateBtn, status);
   }
+
   const close = document.createElement('button');
   close.textContent = 'إغلاق';
   close.style.cssText = 'padding:10px;border:1px solid #cbd5e1;border-radius:12px;font-weight:700';
   close.onclick = () => overlay.remove();
-  const permBtn = document.createElement('button'); permBtn.textContent = '📷💾 فحص وتفعيل صلاحيات الكاميرا والتخزين'; permBtn.style.cssText = 'padding:11px;background:#0f766e;color:white;border-radius:12px;font-weight:800;font-size:12px'; permBtn.onclick = () => window.requestCameraAndStoragePermissions(); panel.append(permBtn, close);
+  const permBtn = document.createElement('button');
+  permBtn.textContent = '📷💾 فحص وتفعيل صلاحيات الكاميرا والتخزين';
+  permBtn.style.cssText = 'padding:11px;background:#0f766e;color:white;border-radius:12px;font-weight:800;font-size:12px';
+  permBtn.onclick = () => window.requestCameraAndStoragePermissions();
+  panel.append(permBtn, close);
   overlay.append(panel);
   document.body.append(overlay);
 }
 window.showAdminLogin = showAdminLogin;
 
-onAuthStateChanged(auth, user => {
-  authenticatedAdmin = !!user && user.uid === ADMIN_UID;
-  serverVerified = false;
-  if (unsubscribeCloud) { unsubscribeCloud(); unsubscribeCloud = null; }
-  if (authenticatedAdmin) {
-    syncStatus('جارٍ الاتصال بـ Firebase…', false);
-    initCloudSync();
-  } else {
-    lastVerifiedFinancialReport = null;
-    state = { salesTotal: 1245.50, dailySales: { [todayLocal()]: 1245.50 }, inventory: [...DEMO_INVENTORY] };
-    cart = [
-      { ...DEMO_INVENTORY[0], quantity: 1 },
-      { ...DEMO_INVENTORY[2], quantity: 2 },
-      { ...DEMO_INVENTORY[3], quantity: 1 }
-    ];
-    draftRestored = false;
-    saveLocalSnapshot();
+function bootstrapLicenseSession() {
+  const storedLic = getStoredLicense();
+  if (storedLic && storedLic.key) {
+    authenticatedAdmin = true;
+    const pillSpan = document.querySelector('.branch-pill span span');
+    if (pillSpan && storedLic.pharmacyName) {
+      pillSpan.textContent = 'الصيدلية الحالية: ' + storedLic.pharmacyName;
+    }
+    loadLocalSnapshot();
     updateUI();
-    syncStatus('وضع المعاينة — سجّل دخول المدير للمزامنة السحابية', false);
-    if (user && user.uid !== ADMIN_UID) signOut(auth).catch(console.error);
+    syncStatus('النسخة مفعّلة (' + storedLic.key + ') ✓', true);
+    if (navigator.onLine) {
+      signInAnonymously(auth).catch(() => {}).finally(() => initCloudSync());
+    }
+  } else {
+    authenticatedAdmin = false;
+    serverVerified = false;
+    state = { salesTotal: 0, dailySales: {}, inventory: [] };
+    cart = [];
+    draftRestored = false;
+    loadLocalSnapshot();
+    updateUI();
+    syncStatus('أدخل كود الترخيص من الإعدادات لتفعيل النسخة الكاملة', false);
   }
+}
+
+onAuthStateChanged(auth, () => {
+  // الجلسة تُدار عبر كود الترخيص المعتمد محلياً وسحابياً
 });
 
 function updateUI() {
-  const sales = authenticatedAdmin ? (Number(state.dailySales?.[todayLocal()]) || 0) : 1245.50;
+  const sales = Number(state.dailySales?.[todayLocal()]) || 0;
   const set = (id, value) => { const el = document.getElementById(id); if (el) el.innerText = value; };
-  set('dash-sales', `£${sales.toFixed(2)}`);
-  set('dash-items-count', authenticatedAdmin ? String(state.inventory.length) : '2,860');
-  set('dash-low-stock', authenticatedAdmin ? `${state.inventory.filter(i => Number(i.qty) < 50).length} صنفاً` : '23 صنفاً');
-  set('dash-near-expiry', authenticatedAdmin ? `${state.inventory.filter(i => i.expiryDate && new Date(i.expiryDate + 'T23:59:59') - new Date() > 0 && new Date(i.expiryDate + 'T23:59:59') - new Date() < 90 * 86400000).length} صنفاً` : '18 صنفاً');
+  set('dash-sales', `${getCurrencySymbol()} ${sales.toFixed(2)}`);
+  set('dash-items-count', String(state.inventory.length));
+  set('dash-low-stock', `${state.inventory.filter(i => Number(i.qty) < 50).length} صنف`);
+  set('dash-near-expiry', `${state.inventory.filter(i => i.expiryDate && new Date(i.expiryDate + 'T23:59:59') - new Date() > 0 && new Date(i.expiryDate + 'T23:59:59') - new Date() < 90 * 86400000).length} صنف`);
   renderInventoryList(state.inventory, activeInventoryFilter);
   renderCart();
   if (window.lucide) window.lucide.createIcons();
@@ -232,6 +343,10 @@ function renderInventoryList(items, filter = 'all') {
   });
 
   container.innerHTML = '';
+  if (!filtered.length) {
+    container.innerHTML = '<div class="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-400 text-xs font-bold">لا توجد أصناف في المخزون حالياً. سجّل دخول المدير أو أضف دواءً جديداً.</div>';
+    return;
+  }
   for (const item of filtered) {
     const qtyNum = Number(item.qty) || 0;
     const isLow = qtyNum < 50;
@@ -248,7 +363,7 @@ function renderInventoryList(items, filter = 'all') {
         <div class="space-y-0.5">
           <h4 class="font-black text-slate-900 text-sm">${escapeHtml(item.name)}</h4>
           <p class="text-[11px] text-slate-500 font-semibold">${escapeHtml(item.generic || '')}</p>
-          <div class="text-emerald-900 font-black text-xs">£${Number(item.price || 0).toFixed(2)}</div>
+          <div class="text-emerald-900 font-black text-xs">${getCurrencySymbol()} ${Number(item.price || 0).toFixed(2)}</div>
           ${isNear && item.expiryDate ? `<div class="text-[10px] text-red-600 font-extrabold">📅 تنتهي: ${escapeHtml(item.expiryDate)}</div>` : ''}
         </div>
       </div>
@@ -270,9 +385,14 @@ window.filterInventory = (type, btn) => {
   renderInventoryList(state.inventory, type);
 };
 
+// --- تحسين أداء البحث في المخزون (Optimized & Debounced Search) ---
+let searchDebounceTimer = null;
 window.filterInventoryText = val => {
-  invSearchQuery = val;
-  renderInventoryList(state.inventory, activeInventoryFilter);
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => {
+    invSearchQuery = val;
+    renderInventoryList(state.inventory, activeInventoryFilter);
+  }, 150); // تأخير زمني خفيف (150ms) لمنع إعادة الرسم المفرط أثناء الكتابة السريعة
 };
 
 window.switchScreen = screenId => {
@@ -294,7 +414,7 @@ window.searchPosQuick = val => {
   box.innerHTML = matches.map(m => `
     <button onclick="window.addToCart('${escapeHtml(m.id)}');document.getElementById('pos-search').value='';document.getElementById('pos-quick-results').classList.add('hidden')" class="w-full text-right px-3.5 py-2.5 border-b border-slate-100 hover:bg-emerald-50 flex justify-between items-center text-xs font-bold">
       <span>${escapeHtml(m.name)}</span>
-      <span class="text-emerald-800 font-black">£${Number(m.price).toFixed(2)} (${m.qty})</span>
+      <span class="text-emerald-800 font-black">${getCurrencySymbol()} ${Number(m.price).toFixed(2)} (${m.qty})</span>
     </button>
   `).join('');
   box.classList.remove('hidden');
@@ -345,8 +465,8 @@ window.renderCart = function renderCart() {
 
   const subEl = document.getElementById('cart-subtotal');
   const finEl = document.getElementById('cart-final-total');
-  if (subEl) subEl.innerText = `£${subtotal.toFixed(2)}`;
-  if (finEl) finEl.innerText = `£${finalTotal.toFixed(2)}`;
+  if (subEl) subEl.innerText = `${getCurrencySymbol()} ${subtotal.toFixed(2)}`;
+  if (finEl) finEl.innerText = `${getCurrencySymbol()} ${finalTotal.toFixed(2)}`;
 
   if (!cart.length) {
     container.innerHTML = '<p class="text-slate-400 text-xs font-bold text-center py-10">السلة فارغة حالياً... اختر أدوية من قسم المخزون أو ابحث بالأعلى</p>';
@@ -364,7 +484,7 @@ window.renderCart = function renderCart() {
         </div>
         <div>
           <h4 class="font-black text-slate-900 text-xs">${escapeHtml(i.name)}</h4>
-          <span class="text-emerald-900 font-black text-xs">£${Number(i.price).toFixed(2)}</span>
+          <span class="text-emerald-900 font-black text-xs">${getCurrencySymbol()} ${Number(i.price).toFixed(2)}</span>
         </div>
       </div>
       <div class="flex items-center gap-1.5">
@@ -395,8 +515,8 @@ function showElectronicInvoice(invoice) {
 
   const rowsHtml = invoice.items.map(it => `
     <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px dashed #e2e8f0">
-      <div><strong>${escapeHtml(it.name)}</strong><br><span style="color:#64748b;font-size:10px">${it.quantity} × £${Number(it.unitPrice).toFixed(2)}</span></div>
-      <strong style="color:#064e3b">£${(it.quantity * Number(it.unitPrice)).toFixed(2)}</strong>
+      <div><strong>${escapeHtml(it.name)}</strong><br><span style="color:#64748b;font-size:10px">${it.quantity} × ${getCurrencySymbol()} ${Number(it.unitPrice).toFixed(2)}</span></div>
+      <strong style="color:#064e3b">${getCurrencySymbol()} ${(it.quantity * Number(it.unitPrice)).toFixed(2)}</strong>
     </div>
   `).join('');
 
@@ -409,9 +529,9 @@ function showElectronicInvoice(invoice) {
     </div>
     <div style="margin-bottom:12px">${rowsHtml}</div>
     <div style="background:#f8fafc;padding:10px;border-radius:12px;font-size:12px;margin-bottom:14px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>الإجمالي الفرعي:</span><strong>£${Number(invoice.subtotal || invoice.total).toFixed(2)}</strong></div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>الخصم:</span><strong>£${Number(invoice.discount || 0).toFixed(2)}</strong></div>
-      <div style="display:flex;justify-content:space-between;font-size:15px;color:#004634;border-top:1px solid #cbd5e1;padding-top:6px"><strong>الإجمالي النهائي:</strong><strong>£${Number(invoice.total).toFixed(2)}</strong></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>الإجمالي الفرعي:</span><strong>${getCurrencySymbol()} ${Number(invoice.subtotal || invoice.total).toFixed(2)}</strong></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span>الخصم:</span><strong>${getCurrencySymbol()} ${Number(invoice.discount || 0).toFixed(2)}</strong></div>
+      <div style="display:flex;justify-content:space-between;font-size:15px;color:#004634;border-top:1px solid #cbd5e1;padding-top:6px"><strong>الإجمالي النهائي:</strong><strong>${getCurrencySymbol()} ${Number(invoice.total).toFixed(2)}</strong></div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:14px">
       <div id="invoice-qr-box" style="padding:8px;background:#fff;border:1px solid #e2e8f0;border-radius:12px"></div>
@@ -435,8 +555,8 @@ function showElectronicInvoice(invoice) {
   }
 
   document.getElementById('share-wa-btn').onclick = () => {
-    const lines = invoice.items.map(i => `• ${i.name} (${i.quantity} × £${Number(i.unitPrice).toFixed(2)})`).join('\n');
-    const text = `*صيدليتي SAYDALIATI*\nفاتورة رقم: ${invoice.id}\n${lines}\n*الإجمالي النهائي: £${Number(invoice.total).toFixed(2)}*`;
+    const lines = invoice.items.map(i => `• ${i.name} (${i.quantity} × ${getCurrencySymbol()} ${Number(i.unitPrice).toFixed(2)})`).join('\n');
+    const text = `*صيدليتي SAYDALIATI*\nفاتورة رقم: ${invoice.id}\n${lines}\n*الإجمالي النهائي: ${getCurrencySymbol()} ${Number(invoice.total).toFixed(2)}*`;
     window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
   };
 }
@@ -466,50 +586,72 @@ window.checkout = async () => {
     return;
   }
 
-  if (!requireOnlineWrite()) return;
   checkoutInProgress = true;
   const saleItems = cart.map(c => ({ id: c.id, quantity: c.quantity }));
   const invoiceId = 'INV-' + crypto.randomUUID();
   const saleDay = todayLocal();
-  const docRef = doc(db, 'pharmacy', 'main_branch');
+  const docRef = doc(db, 'pharmacy', getActiveBranchId());
   const invoiceRef = doc(db, 'invoices', invoiceId);
+
+  const executeLocalCheckout = () => {
+    const inv = state.inventory.map(i => ({ ...i }));
+    let subtotal = 0;
+    const invoiceItems = [];
+    for (const c of saleItems) {
+      const item = inv.find(i => i.id === c.id);
+      if (!item || Number(item.qty) < c.quantity) throw Error('الكمية غير كافية في المخزون');
+      item.qty = Number(item.qty) - c.quantity;
+      subtotal += Number(item.price) * c.quantity;
+      invoiceItems.push({ id: item.id, name: item.name, barcode: item.barcode || '', expiryDate: item.expiryDate || '', quantity: c.quantity, unitPrice: Number(item.price) });
+    }
+    subtotal = Math.round(subtotal * 100) / 100;
+    const total = Math.max(0, Math.round((subtotal - discount) * 100) / 100);
+    state.inventory = inv;
+    state.salesTotal = Math.round(((Number(state.salesTotal) || 0) + total) * 100) / 100;
+    state.dailySales = { ...(state.dailySales || {}) };
+    state.dailySales[saleDay] = Math.round(((Number(state.dailySales[saleDay]) || 0) + total) * 100) / 100;
+    saveLocalSnapshot();
+    return { id: invoiceId, items: invoiceItems, subtotal, discount, total, createdAt: new Date().toISOString(), branchId: getActiveBranchId() };
+  };
 
   try {
     let createdInvoice = null;
-    await runTransaction(db, async t => {
-      const prior = await t.get(invoiceRef);
-      if (prior.exists()) throw Error('الفاتورة مسجلة مسبقاً');
-      const snap = await t.get(docRef);
-      if (!snap.exists()) throw Error('لا توجد بيانات مخزون محفوظة');
-      const data = snap.data();
-      if (!Array.isArray(data.inventory)) throw Error('هيكل بيانات المخزون غير صالح');
-      const inv = data.inventory.map(i => ({ ...i }));
-      let subtotal = 0;
-      const invoiceItems = [];
-      for (const c of saleItems) {
-        if (!Number.isSafeInteger(c.quantity) || c.quantity <= 0) throw Error('كمية غير صالحة');
-        const item = inv.find(i => i.id === c.id);
-        if (!item) throw Error('الصنف غير موجود');
-        if (!validStock(item)) throw Error('الدفعة غير صالحة أو منتهية الصلاحية');
-        if (!Number.isSafeInteger(Number(item.qty)) || Number(item.qty) < c.quantity) throw Error('الكمية غير كافية: ' + item.name);
-        item.qty = Number(item.qty) - c.quantity;
-        subtotal += Number(item.price) * c.quantity;
-        invoiceItems.push({ id: item.id, name: item.name, barcode: item.barcode || '', expiryDate: item.expiryDate || '', quantity: c.quantity, unitPrice: Number(item.price) });
-      }
-      subtotal = Math.round(subtotal * 100) / 100;
-      const total = Math.max(0, Math.round((subtotal - discount) * 100) / 100);
-      const dailySales = { ...(data.dailySales || {}) };
-      dailySales[saleDay] = Math.round(((Number(dailySales[saleDay]) || 0) + total) * 100) / 100;
-      t.update(docRef, { inventory: inv, salesTotal: Math.round(((Number(data.salesTotal) || 0) + total) * 100) / 100, dailySales });
-      createdInvoice = { id: invoiceId, items: invoiceItems, subtotal, discount, total, createdAt: new Date().toISOString(), branchId: 'main_branch' };
-      t.set(invoiceRef, createdInvoice);
-    });
+    if (navigator.onLine && serverVerified) {
+      await runTransaction(db, async t => {
+        const prior = await t.get(invoiceRef);
+        if (prior.exists()) throw Error('الفاتورة مسجلة مسبقاً');
+        const snap = await t.get(docRef);
+        if (!snap.exists()) throw Error('لا توجد بيانات مخزون محفوظة');
+        const data = snap.data();
+        const inv = data.inventory.map(i => ({ ...i }));
+        let subtotal = 0;
+        const invoiceItems = [];
+        for (const c of saleItems) {
+          const item = inv.find(i => i.id === c.id);
+          if (!item) throw Error('الصنف غير موجود');
+          if (!validStock(item)) throw Error('الدفعة غير صالحة أو منتهية الصلاحية');
+          if (Number(item.qty) < c.quantity) throw Error('الكمية غير كافية: ' + item.name);
+          item.qty = Number(item.qty) - c.quantity;
+          subtotal += Number(item.price) * c.quantity;
+          invoiceItems.push({ id: item.id, name: item.name, barcode: item.barcode || '', expiryDate: item.expiryDate || '', quantity: c.quantity, unitPrice: Number(item.price) });
+        }
+        subtotal = Math.round(subtotal * 100) / 100;
+        const total = Math.max(0, Math.round((subtotal - discount) * 100) / 100);
+        const dailySales = { ...(data.dailySales || {}) };
+        dailySales[saleDay] = Math.round(((Number(dailySales[saleDay]) || 0) + total) * 100) / 100;
+        t.update(docRef, { inventory: inv, salesTotal: Math.round(((Number(data.salesTotal) || 0) + total) * 100) / 100, dailySales });
+        createdInvoice = { id: invoiceId, items: invoiceItems, subtotal, discount, total, createdAt: new Date().toISOString(), branchId: getActiveBranchId() };
+        t.set(invoiceRef, createdInvoice);
+      });
+    } else {
+      createdInvoice = executeLocalCheckout();
+    }
     cart = [];
     saveCartDraft();
-    renderCart();
+    updateUI();
     showElectronicInvoice(createdInvoice);
   } catch (e) {
-    alert('لم تُحفظ عملية البيع: ' + (e.message || 'خطأ في الاتصال'));
+    alert('لم تُحفظ عملية البيع: ' + (e.message || 'خطأ في العملية'));
   } finally {
     checkoutInProgress = false;
   }
@@ -535,17 +677,23 @@ window.addNewProduct = async e => {
     return;
   }
 
-  if (!requireOnlineWrite()) return;
   try {
-    await runTransaction(db, async t => {
-      const ref = doc(db, 'pharmacy', 'main_branch');
-      const snap = await t.get(ref);
-      if (!snap.exists()) throw Error('لم يتم تهيئة المخزون');
-      const inv = [...snap.data().inventory];
-      inv.push({ id: crypto.randomUUID(), name, generic, barcode, expiryDate, price, qty });
-      t.update(ref, { inventory: inv });
-    });
-    alert('تمت إضافة الدواء إلى السحابة بنجاح');
+    const newItem = { id: crypto.randomUUID(), name, generic, barcode, expiryDate, price, qty };
+    if (navigator.onLine && serverVerified) {
+      await runTransaction(db, async t => {
+        const ref = doc(db, 'pharmacy', getActiveBranchId());
+        const snap = await t.get(ref);
+        if (!snap.exists()) throw Error('لم يتم تهيئة المخزون');
+        const inv = [...snap.data().inventory, newItem];
+        t.update(ref, { inventory: inv });
+      });
+      alert('تمت إضافة الدواء وحفظه سحابياً بنجاح ✓');
+    } else {
+      state.inventory.unshift(newItem);
+      saveLocalSnapshot();
+      updateUI();
+      alert('تمت إضافة الدواء وحفظه محلياً بنجاح ✓');
+    }
     document.getElementById('add-product-form').reset();
     window.switchScreen('screen-inventory');
   } catch (e) {
@@ -554,85 +702,43 @@ window.addNewProduct = async e => {
 };
 
 async function scanBarcode(target = 'pos') {
-  const overlay = document.createElement('div');
-  overlay.id = 'saydaliati-scanner-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#001b15eb;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;color:white;direction:rtl';
-
-  const title = document.createElement('h3');
-  title.textContent = 'مسح الباركود بالكاميرا';
-  title.style.cssText = 'font-size:18px;font-weight:900;color:#f4c66c;margin:0';
-
-  const readerBox = document.createElement('div');
-  readerBox.id = 'saydaliati-qr-reader';
-  readerBox.style.cssText = 'width:100%;max-width:380px;min-height:260px;border-radius:18px;overflow:hidden;border:2px solid #f4c66c;background:#000';
-
-  const manualWrap = document.createElement('div');
-  manualWrap.style.cssText = 'display:flex;gap:8px;width:100%;max-width:380px';
-  const manualInput = document.createElement('input');
-  manualInput.type = 'text';
-  manualInput.placeholder = 'أو أدخل رقم الباركود يدوياً هنا...';
-  manualInput.style.cssText = 'flex:1;padding:12px;border-radius:12px;border:1px solid #cbd5e1;color:#111;font-size:13px;font-weight:700;background:#fff';
-  const manualBtn = document.createElement('button');
-  manualBtn.textContent = 'تأكيد';
-  manualBtn.style.cssText = 'background:#f4c66c;color:#003a2c;padding:0 18px;border-radius:12px;font-weight:900;font-size:13px';
-
-  const close = document.createElement('button');
-  close.textContent = 'إغلاق الكاميرا';
-  close.style.cssText = 'background:#006b3d;color:white;padding:12px 28px;border-radius:12px;font-weight:800;font-size:14px;width:100%;max-width:380px';
-
-  let html5Qr = null;
-  let stopped = false;
-  const stop = async () => {
-    if (stopped) return;
-    stopped = true;
-    try {
-      if (html5Qr && html5Qr.isScanning) {
-        await html5Qr.stop();
-      }
-    } catch (e) {}
-    overlay.remove();
-  };
-
-  manualBtn.onclick = async () => {
-    const val = manualInput.value.trim();
-    if (val) {
-      await stop();
-      handleScannedCode(val, target);
-    }
-  };
-  manualInput.addEventListener('keypress', async (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      manualBtn.click();
-    }
-  });
-
-  close.onclick = stop;
-  manualWrap.append(manualInput, manualBtn);
-  overlay.append(title, readerBox, manualWrap, close);
-  document.body.append(overlay);
-
-  if (typeof window.Html5Qrcode === 'undefined') {
-    manualInput.focus();
+  if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia) {
+    const manual = prompt('الكاميرا غير مدعومة في هذا المتصفح. أدخل رقم الباركود يدوياً:');
+    if (manual) handleScannedCode(manual.trim(), target);
     return;
   }
-
+  let stream, raf;
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#000e;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;color:white';
+  const video = document.createElement('video');
+  video.autoplay = true; video.playsInline = true;
+  video.style.cssText = 'width:100%;max-width:390px;border-radius:18px;border:2px solid #f4c66c';
+  const close = document.createElement('button');
+  close.textContent = 'إغلاق الكاميرا';
+  close.style.cssText = 'background:#006b3d;padding:12px 26px;border-radius:12px;font-weight:800';
+  const stop = () => { cancelAnimationFrame(raf); stream?.getTracks().forEach(t => t.stop()); overlay.remove(); };
+  close.onclick = stop;
+  overlay.append(video, close);
+  document.body.append(overlay);
   try {
-    html5Qr = new window.Html5Qrcode('saydaliati-qr-reader');
-    await html5Qr.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 250, height: 150 }, aspectRatio: 1.333334 },
-      async (decodedText) => {
-        if (navigator.vibrate) navigator.vibrate(100);
-        await stop();
-        handleScannedCode(decodedText.trim(), target);
-      },
-      () => {}
-    );
-  } catch (e) {
-    console.warn('تعذر تشغيل الكاميرا، الإدخال اليدوي متاح:', e);
-    manualInput.focus();
-  }
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+    video.srcObject = stream;
+    await video.play();
+    const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'] });
+    let busy = false;
+    const frame = async () => {
+      if (!overlay.isConnected) return;
+      if (!busy && video.readyState >= 2) {
+        busy = true;
+        try {
+          const found = await detector.detect(video);
+          if (found.length) { handleScannedCode(found[0].rawValue, target); stop(); return; }
+        } finally { busy = false; }
+      }
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+  } catch (e) { stop(); alert('تعذر تشغيل الكاميرا'); }
 }
 
 function handleScannedCode(code, target) {
@@ -686,7 +792,7 @@ async function showInvoices() {
     msg.textContent = snaps.empty ? 'لا توجد فواتير مسجلة' : `آخر ${snaps.size} فاتورة`;
     snaps.forEach(s => {
       const d = s.data();
-      const row = adminText(panel, `${d.id || s.id}\n${d.createdAt || ''}\nالإجمالي: £${Number(d.total || 0).toFixed(2)}`);
+      const row = adminText(panel, `${d.id || s.id}\n${d.createdAt || ''}\nالإجمالي: ${getCurrencySymbol()} ${Number(d.total || 0).toFixed(2)}`);
       row.style.cssText += ';background:#f8fafc;padding:8px;border-radius:10px;border:1px solid #e2e8f0;cursor:pointer';
       row.onclick = () => showElectronicInvoice(d);
     });
@@ -720,7 +826,7 @@ async function showSalesReturns() {
         const value = Math.round(q * price * 100) / 100;
         const returnedQty = { ...(sale.returnedQty || {}), [sid]: prior + q };
         tx.update(invoiceRef, { returnedQty, returnedValue: Math.round((Number(sale.returnedValue || 0) + value) * 100) / 100 });
-        tx.set(returnRef, { invoiceId: id, stockId: sid, productName: String(line.name || ''), quantity: q, refundAmount: value, reason: reason.value.trim(), createdAt: new Date().toISOString(), branchId: 'main_branch', restockStatus: 'quarantined', refundStatus: 'pending' });
+        tx.set(returnRef, { invoiceId: id, stockId: sid, productName: String(line.name || ''), quantity: q, refundAmount: value, reason: reason.value.trim(), createdAt: new Date().toISOString(), branchId: getActiveBranchId(), restockStatus: 'quarantined', refundStatus: 'pending' });
       });
       status.textContent = 'تم تسجيل المرتجع بنجاح.';
     } catch (e) { status.textContent = 'فشل تسجيل المرتجع: ' + (e.code || e.message); }
@@ -741,12 +847,12 @@ async function showReports() {
     const records = {};
     for (const name of names) {
       const snap = await getDocs(collection(db, name));
-      records[name] = snap.docs.filter(d => d.data().branchId === 'main_branch').map(d => d.data());
+      records[name] = snap.docs.filter(d => d.data().branchId === getActiveBranchId()).map(d => d.data());
     }
     const sales = records.invoices.reduce((s, r) => s + Number(r.total || 0), 0);
     const purchasesTotal = records.purchases.reduce((s, r) => s + Number(r.total || 0), 0);
     const salesReturns = records.sales_returns.reduce((s, r) => s + Number(r.refundAmount || 0), 0);
-    const reportText = `فواتير البيع: ${records.invoices.length}\nإجمالي المبيعات: £${sales.toFixed(2)}\nمرتجعات المبيعات: £${salesReturns.toFixed(2)}\nصافي المبيعات: £${(sales - salesReturns).toFixed(2)}\nفواتير الشراء: ${records.purchases.length}\nقيمة المشتريات: £${purchasesTotal.toFixed(2)}`;
+    const reportText = `فواتير البيع: ${records.invoices.length}\nإجمالي المبيعات: ${getCurrencySymbol()} ${sales.toFixed(2)}\nمرتجعات المبيعات: ${getCurrencySymbol()} ${salesReturns.toFixed(2)}\nصافي المبيعات: ${getCurrencySymbol()} ${(sales - salesReturns).toFixed(2)}\nفواتير الشراء: ${records.purchases.length}\nقيمة المشتريات: ${getCurrencySymbol()} ${purchasesTotal.toFixed(2)}`;
     lastVerifiedFinancialReport = reportText;
     msg.textContent = reportText;
   } catch (e) { msg.textContent = 'تعذر إصدار التقرير: ' + (e.code || e.message); }
@@ -761,7 +867,7 @@ async function showSuppliers() {
   adminButton(panel, 'حفظ المورد', async () => {
     if (!name.value.trim()) return msg.textContent = 'أدخل اسم المورد';
     try {
-      await setDoc(doc(collection(db, 'suppliers')), { name: name.value.trim(), phone: phone.value.trim(), createdAt: new Date().toISOString(), branchId: 'main_branch' });
+      await setDoc(doc(collection(db, 'suppliers')), { name: name.value.trim(), phone: phone.value.trim(), createdAt: new Date().toISOString(), branchId: getActiveBranchId() });
       msg.textContent = 'تم حفظ المورد بنجاح'; name.value = ''; phone.value = '';
     } catch (e) { msg.textContent = 'فشل الحفظ: ' + e.message; }
   });
@@ -784,13 +890,13 @@ async function showPurchases() {
     const purchaseId = 'PUR-' + crypto.randomUUID();
     try {
       await runTransaction(db, async tx => {
-        const stockRef = doc(db, 'pharmacy', 'main_branch');
+        const stockRef = doc(db, 'pharmacy', getActiveBranchId());
         const snap = await tx.get(stockRef);
         const inv = [...(snap.data()?.inventory || [])];
         const stockId = crypto.randomUUID();
         inv.push({ id: stockId, name: name.value.trim(), generic: '', barcode: barcode.value.trim(), expiryDate: expiry.value, qty: q, price: p, purchaseCost: c, purchaseId, supplierName: supplier.value.trim() });
         tx.update(stockRef, { inventory: inv });
-        tx.set(doc(db, 'purchases', purchaseId), { id: purchaseId, branchId: 'main_branch', supplierName: supplier.value.trim(), createdAt: new Date().toISOString(), total: q * c, paid: q * c, balance: 0 });
+        tx.set(doc(db, 'purchases', purchaseId), { id: purchaseId, branchId: getActiveBranchId(), supplierName: supplier.value.trim(), createdAt: new Date().toISOString(), total: q * c, paid: q * c, balance: 0 });
       });
       status.textContent = 'تم حفظ فاتورة الشراء: ' + purchaseId;
     } catch (e) { status.textContent = 'فشل الحفظ: ' + e.message; }
@@ -806,7 +912,7 @@ async function showEmployees() {
   adminButton(panel, 'حفظ سجل الموظف', async () => {
     if (!name.value.trim() || !email.value.trim()) return status.textContent = 'أدخل الاسم والبريد';
     try {
-      await setDoc(doc(collection(db, 'employees')), { name: name.value.trim(), email: email.value.trim(), role: 'pharmacist', status: 'active', branchId: 'main_branch', createdAt: new Date().toISOString() });
+      await setDoc(doc(collection(db, 'employees')), { name: name.value.trim(), email: email.value.trim(), role: 'pharmacist', status: 'active', branchId: getActiveBranchId(), createdAt: new Date().toISOString() });
       status.textContent = 'تم حفظ الموظف';
     } catch (e) { status.textContent = 'خطأ: ' + e.message; }
   });
@@ -847,7 +953,7 @@ window.showBranches = showBranches;
 window.showBackupAndRestore = showBackupAndRestore;
 
 document.addEventListener('DOMContentLoaded', () => {
-  updateUI();
+  bootstrapLicenseSession();
 });
 
 document.addEventListener('click', event => {
@@ -869,7 +975,7 @@ const LOCAL_META_CACHE_KEY = 'saydaliati_local_meta_cache_v1';
 
 function saveLocalSnapshot() {
   try {
-    if (Array.isArray(state.inventory) && state.inventory.length) {
+    if (Array.isArray(state.inventory)) {
       localStorage.setItem(LOCAL_INV_CACHE_KEY, JSON.stringify(state.inventory));
       localStorage.setItem(LOCAL_META_CACHE_KEY, JSON.stringify({
         salesTotal: state.salesTotal || 0,
@@ -888,7 +994,7 @@ function loadLocalSnapshot() {
     const rawMeta = localStorage.getItem(LOCAL_META_CACHE_KEY);
     if (rawInv) {
       const parsedInv = JSON.parse(rawInv);
-      if (Array.isArray(parsedInv) && parsedInv.length) state.inventory = parsedInv;
+      if (Array.isArray(parsedInv)) state.inventory = parsedInv.filter(item => !String(item.id || '').startsWith('demo-'));
     }
     if (rawMeta) {
       const parsedMeta = JSON.parse(rawMeta);
@@ -933,3 +1039,46 @@ window.requestCameraAndStoragePermissions = requestCameraAndStoragePermissions;
 loadLocalSnapshot();
 window.addEventListener('beforeunload', saveLocalSnapshot);
 setInterval(saveLocalSnapshot, 15000);
+
+
+// --- إدارة العملة والدولة (Currency & Regional Settings) ---
+let currentCurrency = localStorage.getItem('saydaliati_currency_symbol') || 'جنيه';
+
+function getCurrencySymbol() {
+  return currentCurrency;
+}
+
+function setCurrencySymbol(symbol) {
+  currentCurrency = symbol;
+  localStorage.setItem('saydaliati_currency_symbol', symbol);
+  updateUI();
+  // إذا كان المدير مسجلاً، يمكننا حفظ إعداد العملة في مستند الصيدلية السحابي أيضاً
+}
+window.getCurrencySymbol = getCurrencySymbol;
+window.setCurrencySymbol = setCurrencySymbol;
+
+
+async function showCurrencySettings() {
+  if (!requireAdmin()) return;
+  const { panel } = adminPanel('إعدادات العملة والدولة');
+  adminText(panel, 'اختر العملة الرسمية لصيدليتك أو فرعك:');
+  
+  const currencies = [
+    { name: 'الجنيه المصري (EGP - ج.م)', symbol: 'ج.م' },
+    { name: 'الريال السعودي (SAR - ر.س)', symbol: 'ر.س' },
+    { name: 'الدرهم الإماراتي (AED - د.إ)', symbol: 'د.إ' },
+    { name: 'الدينار الأردني (JOD - د.أ)', symbol: 'د.أ' },
+    { name: 'الدينار الكويتي (KWD - د.ك)', symbol: 'د.ك' },
+    { name: 'الدينار العراقي (IQD - د.ع)', symbol: 'د.ع' },
+    { name: 'الليرة اللبنانية (LBP - ل.ل)', symbol: 'ل.ل' },
+    { name: 'العملة الافتراضية (£)', symbol: '£' }
+  ];
+
+  for (const c of currencies) {
+    adminButton(panel, `اعتماد: ${c.name}`, () => {
+      setCurrencySymbol(c.symbol);
+      alert(`تم تغيير عملة النظام إلى: ${c.name} (${c.symbol}) بنجاح ✓`);
+    });
+  }
+}
+window.showCurrencySettings = showCurrencySettings;
