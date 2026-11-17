@@ -5,7 +5,7 @@
   "scripts": {
     "build:css": "tailwindcss -c tailwind.config.js -i src/tailwind.input.css -o www/tailwind.css --minify",
     "build:js": "esbuild src/app.js --bundle --minify --format=esm --target=es2020 --outfile=www/app.js",
-    "build:static": "mkdir -p www/vendor && cp src/index.html src/manifest.json src/legal/privacy.html src/legal/terms.html www/ && cp node_modules/html5-qrcode/html5-qrcode.min.js www/vendor/ && cp node_modules/qrcodejs/qrcode.js www/vendor/qrcode.js",
+    "build:static": "mkdir -p www/vendor && cp src/index.html src/manifest.json src/legal/privacy.html src/legal/terms.html src/legal/delete-account.html www/ && cp node_modules/html5-qrcode/html5-qrcode.min.js www/vendor/ && cp node_modules/qrcodejs/qrcode.js www/vendor/qrcode.js",
     "build": "npm run build:static && npm run build:css && npm run build:js",
     "cap:sync": "npm run build && npx cap sync",
     "android": "npx cap open android",
