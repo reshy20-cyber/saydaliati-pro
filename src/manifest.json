@@ -1,9 +1,6 @@
 {
   "name": "صيدليتي PRO | SAYDALIATI",
   "short_name": "صيدليتي",
-    "id": "com.saydaliati.pro",
-  "description": "تطبيق لإدارة الصيدلية وتنظيم العمليات بكفاءة عالية",
-
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#003a2c",

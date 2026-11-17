@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function pharmacyPath(pid) { return /databases/$(database)/documents/pharmacies/$(pid); }
+    // مستند عضوية المستخدم الحالي في الصيدلية (للمالك أيضاً مستند عضوية)
+    function me(pid) { return get(/databases/$(database)/documents/pharmacies/$(pid)/members/$(request.auth.uid)).data; }
+
+    function isActive(pid) { return signedIn() && me(pid).status == 'active'; }
+    function isOwner(pid) { let m = me(pid); return signedIn() && m.status == 'active' && m.role == 'owner'; }
+    function isManager(pid) { let m = me(pid); return signedIn() && m.status == 'active' && m.role in ['owner', 'manager']; }
+    function inBranch(pid, bid) { let m = me(pid); return signedIn() && m.status == 'active' && (m.allBranches == true || bid in m.branchIds); }
+    function managerInBranch(pid, bid) { let m = me(pid); return signedIn() && m.status == 'active' && m.role in ['owner', 'manager'] && (m.allBranches == true || bid in m.branchIds); }
+
+    // ربط المستخدم بصيدليته
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && (
+        request.auth.uid == uid ||
+        get(pharmacyPath(request.resource.data.pharmacyId)).data.ownerUid == request.auth.uid);
+      allow delete: if signedIn() && (
+        request.auth.uid == uid ||
+        get(pharmacyPath(resource.data.pharmacyId)).data.ownerUid == request.auth.uid);
+    }
+
+    match /pharmacies/{pid} {
+      allow read: if isActive(pid);
+      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if signedIn() && resource.data.ownerUid == request.auth.uid
+                    && request.resource.data.ownerUid == resource.data.ownerUid;
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+
+      match /members/{uid} {
+        allow read: if signedIn() && (request.auth.uid == uid || isManager(pid));
+        allow create: if signedIn() && (
+          (request.auth.uid == uid && request.resource.data.role == 'owner'
+            && get(pharmacyPath(pid)).data.ownerUid == request.auth.uid)
+          || isOwner(pid));
+        allow update: if isOwner(pid);
+        allow delete: if signedIn() && (request.auth.uid == uid || isOwner(pid));
+      }
+
+      match /suppliers/{id} {
+        allow read, write: if isManager(pid);
+      }
+
+      match /branches/{bid} {
+        allow read: if isActive(pid);
+        allow create, update, delete: if isOwner(pid);
+
+        match /stock/{sid} {
+          allow read: if inBranch(pid, bid);
+          allow create, delete: if managerInBranch(pid, bid);
+          // الكاشير يستطيع تعديل الكمية فقط (عند البيع)
+          allow update: if managerInBranch(pid, bid) ||
+            (inBranch(pid, bid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['qty']));
+        }
+        match /invoices/{iid} {
+          allow read: if inBranch(pid, bid);
+          allow create: if inBranch(pid, bid) && request.resource.data.branchId == bid;
+          allow update: if managerInBranch(pid, bid);
+          allow delete: if isOwner(pid);
+        }
+        match /daily/{day} {
+          allow read, write: if inBranch(pid, bid);
+        }
+        match /purchases/{id} {
+          allow read, create: if managerInBranch(pid, bid);
+          allow delete: if isOwner(pid);
+        }
+        match /returns/{id} {
+          allow read, create: if managerInBranch(pid, bid);
+          allow delete: if isOwner(pid);
+        }
+      }
+    }
+  }
+}
