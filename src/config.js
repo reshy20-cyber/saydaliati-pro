@@ -8,8 +8,8 @@ export const CONFIG = {
     entitlementId: 'pro'
   },
   // روابط إلزامية لدى Apple وGoogle للتطبيقات ذات الاشتراكات
-  privacyUrl: '',
-  termsUrl: '',
+  privacyUrl: 'https://saydaliati-pro.vercel.app/privacy.html',
+  termsUrl: 'https://saydaliati-pro.vercel.app/terms.html',
   // أيام سماح بعد انتهاء الاشتراك (لحالات إعادة محاولة الدفع)
   graceDays: 2
 };
