@@ -559,26 +559,53 @@ export function showBackupAndRestore() {
 }
 
 // ================= العملة =================
+const CURRENCIES = [
+  { name: 'الجنيه المصري (EGP)', symbol: 'ج.م' },
+  { name: 'الريال السعودي (SAR)', symbol: 'ر.س' },
+  { name: 'الدرهم الإماراتي (AED)', symbol: 'د.إ' },
+  { name: 'الريال القطري (QAR)', symbol: 'ر.ق' },
+  { name: 'الدينار الكويتي (KWD)', symbol: 'د.ك' },
+  { name: 'الدينار البحريني (BHD)', symbol: 'د.ب' },
+  { name: 'الريال العماني (OMR)', symbol: 'ر.ع' },
+  { name: 'الدينار الأردني (JOD)', symbol: 'د.أ' },
+  { name: 'الليرة اللبنانية (LBP)', symbol: 'ل.ل' },
+  { name: 'الدينار العراقي (IQD)', symbol: 'د.ع' },
+  { name: 'الليرة السورية (SYP)', symbol: 'ل.س' },
+  { name: 'الريال اليمني (YER)', symbol: 'ر.ي' },
+  { name: 'الدينار الليبي (LYD)', symbol: 'د.ل' },
+  { name: 'الدينار التونسي (TND)', symbol: 'د.ت' },
+  { name: 'الدينار الجزائري (DZD)', symbol: 'د.ج' },
+  { name: 'الدرهم المغربي (MAD)', symbol: 'د.م' },
+  { name: 'الجنيه السوداني (SDG)', symbol: 'ج.س' },
+  { name: 'الأوقية الموريتانية (MRU)', symbol: 'أ.م' },
+  { name: 'الشلن الصومالي (SOS)', symbol: 'ش.ص' },
+  { name: 'الفرنك الجيبوتي (DJF)', symbol: 'ف.ج' },
+  { name: 'الفرنك القمري (KMF)', symbol: 'ف.ق' },
+  { name: 'الشيكل (ILS) - فلسطين', symbol: '₪' }
+];
+
 export function showCurrencySettings() {
-  const { panel } = adminPanel('إعدادات العملة');
-  adminText(panel, 'اختر العملة الرسمية لصيدليتك:');
-  const currencies = [
-    { name: 'الجنيه الإسترليني (£)', symbol: '£' },
-    { name: 'الجنيه المصري (EGP - ج.م)', symbol: 'ج.م' },
-    { name: 'الريال السعودي (SAR - ر.س)', symbol: 'ر.س' },
-    { name: 'الدرهم الإماراتي (AED - د.إ)', symbol: 'د.إ' },
-    { name: 'الدينار الأردني (JOD - د.أ)', symbol: 'د.أ' },
-    { name: 'الدينار الكويتي (KWD - د.ك)', symbol: 'د.ك' },
-    { name: 'الدينار العراقي (IQD - د.ع)', symbol: 'د.ع' },
-    { name: 'الليرة اللبنانية (LBP - ل.ل)', symbol: 'ل.ل' }
-  ];
-  for (const c of currencies) {
-    adminButton(panel, `اعتماد: ${c.name}`, () => {
-      S.currency = c.symbol;
-      localStorage.setItem('saydaliati_currency_symbol', c.symbol);
-      hooks.updateUI();
-      alert(`تم تغيير عملة النظام إلى: ${c.name} بنجاح ✓`);
-    });
+  const { panel, overlay } = adminPanel('إعدادات العملة');
+  const cloud = isCloud();
+  const staff = cloud && role() !== 'owner';
+  adminText(panel, staff
+    ? 'عملة الصيدلية يحددها المالك: ' + getCurrencySymbol()
+    : (cloud ? 'العملة الرسمية لصيدليتك (تُطبَّق على كل الموظفين والفروع):' : 'اختر العملة:'));
+  if (staff) return;
+  for (const c of CURRENCIES) {
+    adminButton(panel, `${c.symbol === getCurrencySymbol() ? '✓ ' : ''}${c.name}`, async () => {
+      try {
+        if (cloud) {
+          if (!requireOnlineWrite()) return;
+          await updateDoc(pharmacyRef(S.session.pharmacyId), { currency: c.symbol });
+        }
+        S.currency = c.symbol;
+        localStorage.setItem('saydaliati_currency_symbol', c.symbol);
+        hooks.updateUI();
+        overlay.remove();
+        toast('تم تغيير العملة إلى ' + c.name);
+      } catch (e) { alert('تعذر تغيير العملة: ' + authErrorMessage(e)); }
+    }, c.symbol === getCurrencySymbol() ? 'gold' : 'primary');
   }
 }
 

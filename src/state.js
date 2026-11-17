@@ -5,7 +5,7 @@ export const S = {
   state: { inventory: [], dailySales: {} },
   cart: [],
   session: { user: null, pharmacyId: null, pharmacy: null, member: null, branches: [], branchId: null },
-  currency: localStorage.getItem('saydaliati_currency_symbol') || '£',
+  currency: (() => { const c = localStorage.getItem('saydaliati_currency_symbol'); return c && c !== '£' ? c : 'ج.م'; })(),
   checkoutInProgress: false,
   activeFilter: 'all',
   invQuery: ''
@@ -14,7 +14,8 @@ export const S = {
 // دوال تُسجَّل من app.js لتفادي الاستيراد الدائري
 export const hooks = {};
 
-export const getCurrencySymbol = () => S.currency;
+// في الوضع السحابي تُوحَّد العملة لكل موظفي الصيدلية (يحددها المالك)
+export const getCurrencySymbol = () => (S.session.pharmacyId && S.session.pharmacy?.currency) || S.currency;
 export const isCloud = () => !!(S.session.user && S.session.pharmacyId && S.session.member && S.session.member.status === 'active');
 export const role = () => (isCloud() ? S.session.member.role : null);
 
