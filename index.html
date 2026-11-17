@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>صيدليتي PRO | SAYDALIATI</title>
+  <link rel="stylesheet" href="tailwind.css">
+  <script src="vendor/qrcode.js"></script>
+  <!-- مكتبة Html5Qrcode المتوافقة مع جميع المتصفحات بما فيها Safari على iOS -->
+  <script src="vendor/html5-qrcode.min.js"></script>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#003a2c">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23003e30'/%3E%3Cpath d='M26 14h12v12h12v12H38v12H26V38H14V26h12z' fill='%23f4c66c'/%3E%3C/svg%3E">
+  <style>
+    :root { --forest: #003e30; --green: #006b3d; --gold: #f4c66c; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; padding: 0; background: #e9edf0; font-family: system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif; color: #102e25; }
+    .app-shell {
+      width: 100%; max-width: 430px; margin: 0 auto; min-height: 100dvh;
+      background: linear-gradient(180deg, #f7fafb 0%, #edf2f5 100%);
+      box-shadow: 0 0 35px rgba(25, 57, 42, 0.14);
+      display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow-x: hidden;
+    }
+    @media (min-width: 500px) {
+      .app-shell { margin: 16px auto; min-height: 850px; border-radius: 36px; border: 4px solid #003a2c; overflow: hidden; }
+    }
+    .hero-header {
+      position: relative;
+      background: linear-gradient(145deg, #003a2c 0%, #00533b 65%, #00683e 100%);
+      padding: 18px 16px 38px;
+      border-bottom: 4px solid #e7bd6b;
+      border-radius: 0 0 28% 8% / 0 0 14% 4%;
+      box-shadow: 0 6px 16px rgba(0, 59, 43, 0.22);
+      color: white;
+    }
+    .hero-header::after {
+      content: ""; position: absolute; inset: 0; opacity: 0.14; pointer-events: none;
+      background: radial-gradient(circle at 20% 80%, #a7f3d0 0%, transparent 55%),
+                  repeating-linear-gradient(90deg, rgba(255,255,255,0.12) 0 14px, transparent 14px 28px);
+      border-radius: inherit;
+    }
+    .branch-pill {
+      background: linear-gradient(180deg, #ffffff 0%, #f6f8f9 100%);
+      color: #063c2d; border-radius: 16px;
+      box-shadow: 0 5px 14px rgba(0, 27, 22, 0.18);
+      padding: 11px 14px; margin: -24px 14px 12px; position: relative; z-index: 10;
+      border: 1px solid #dce6e2;
+    }
+    .stat-card {
+      min-height: 104px; border-radius: 16px; padding: 12px 10px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+      box-shadow: 0 3px 8px rgba(32, 56, 43, 0.16);
+    }
+    .stat-sales { background: linear-gradient(140deg, #09617a, #002c49); color: #fff; }
+    .stat-items { background: linear-gradient(140deg, #00945a, #00502f); color: #fff; }
+    .stat-warn  { background: linear-gradient(145deg, #fff4d5, #ffdfa0); color: #451a03; }
+    .shortcut-btn {
+      min-height: 78px; padding: 9px 4px;
+      background: linear-gradient(180deg, #ffffff 0%, #f6f8fa 100%);
+      border: 1px solid #d4dee2; border-radius: 15px;
+      box-shadow: 0 3px 5px rgba(22, 62, 48, 0.14);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+      font-size: 11px; font-weight: 800; color: #102e25; transition: transform 0.12s;
+    }
+    .shortcut-btn:active { transform: scale(0.96); }
+    .shortcut-icon { color: #006139; display: flex; align-items: center; justify-content: center; height: 28px; }
+    .sub-header {
+      background: linear-gradient(135deg, #00392c, #00533c);
+      color: white; padding: 22px 16px 20px;
+      border-radius: 0 0 28% 6% / 0 0 16% 4%;
+      border-bottom: 3px solid #e7bd6b;
+    }
+    .gold-cta {
+      background: linear-gradient(180deg, #008c50 0%, #00432f 100%);
+      border: 2px solid #f4ca73; border-radius: 17px;
+      color: white; font-weight: 900; box-shadow: 0 4px 12px rgba(0, 67, 47, 0.28);
+    }
+    .bottom-nav {
+      background: linear-gradient(145deg, #003a2d, #00553b);
+      border-top: 2px solid #c8a85b;
+      border-radius: 24px 24px 0 0;
+      padding: 10px 14px max(10px, env(safe-area-inset-bottom));
+      box-shadow: 0 -4px 18px rgba(0, 42, 34, 0.22);
+    }
+    .hidden { display: none !important; }
+    input, select, textarea { font-size: 16px !important; }
+    @media print {
+      body * { visibility: hidden; }
+      #invoice-print-area, #invoice-print-area * { visibility: visible; }
+      #invoice-print-area { position: fixed; inset: 0; background: white; padding: 20px; z-index: 99999; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="flex-1 overflow-y-auto pb-24">
+
+      <!-- 1. الشاشة الرئيسية -->
+      <div id="screen-home" class="screen-view">
+        <div class="hero-header">
+          <div class="flex justify-between items-center relative z-10">
+            <button onclick="window.showAdminLogin()" title="حالة المزامنة والترخيص" aria-label="حالة المزامنة والترخيص" class="relative w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-amber-300 fill-amber-300" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0" /><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" /></svg>
+              <span id="cloud-dot" class="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-amber-400 border border-emerald-950"></span>
+            </button>
+
+            <div class="flex items-center gap-3">
+              <div class="text-right">
+                <h1 class="text-3xl font-black tracking-tight leading-none text-white">صيدليتي</h1>
+                <p class="text-sm font-extrabold tracking-widest text-amber-200 mt-0.5">SAYDALIATI</p>
+              </div>
+              <div class="w-14 h-14 rounded-t-md rounded-b-3xl border-[3px] border-white bg-gradient-to-br from-emerald-500 to-emerald-900 flex flex-col items-center justify-center shadow-md relative">
+                <span class="text-xs leading-none -mt-1">🌿</span>
+                <span class="text-white font-black text-xl leading-none">+</span>
+              </div>
+            </div>
+
+            <button onclick="window.showAdminLogin()" title="إعدادات الترخيص" aria-label="الإعدادات" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-amber-200" aria-hidden="true"><line x1="4" x2="20" y1="12" y2="12" /><line x1="4" x2="20" y1="6" y2="6" /><line x1="4" x2="20" y1="18" y2="18" /></svg>
+            </button>
+          </div>
+          <p class="text-center text-xs font-extrabold text-white/95 mt-2 relative z-10">نظام متكامل لإدارة الصيدليات والفروع</p>
+        </div>
+
+        <!-- شريط الصيدلية الحالية -->
+        <div class="branch-pill flex justify-between items-center text-xs font-extrabold cursor-pointer" onclick="window.showBranches()" role="button" aria-label="تبديل الفرع">
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-800 flex items-center justify-center border border-emerald-200">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4" aria-hidden="true"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" /><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" /><path d="M2 7h20" /><path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7" /></svg>
+            </span>
+            <span id="branch-name-label">الصيدلية الحالية: الصيدلية الرئيسية</span>
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-emerald-800" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+        </div>
+
+        <div class="px-3.5 space-y-3">
+          <!-- البطاقات الإحصائية الأربع -->
+          <div class="grid grid-cols-2 gap-2.5">
+            <div class="stat-card stat-sales">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-sky-200 mb-1" aria-hidden="true"><line x1="12" x2="12" y1="20" y2="10" /><line x1="18" x2="18" y1="20" y2="4" /><line x1="6" x2="6" y1="20" y2="16" /></svg>
+              <p class="text-xs font-bold text-sky-100">مبيعات اليوم</p>
+              <h3 id="dash-sales" class="text-xl font-black mt-0.5">£0.00</h3>
+            </div>
+            <div class="stat-card stat-items">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-emerald-200 mb-1" aria-hidden="true"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z" /><path d="m8.5 8.5 7 7" /></svg>
+              <p class="text-xs font-bold text-emerald-100">عدد الأصناف</p>
+              <h3 id="dash-items-count" class="text-xl font-black mt-0.5">0</h3>
+            </div>
+            <div class="stat-card stat-warn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-amber-800 mb-1" aria-hidden="true"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z" /><path d="M12 22V12" /><path d="m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7" /><path d="m7.5 4.27 9 5.15" /></svg>
+              <p class="text-xs font-extrabold text-amber-900">منخفض المخزون</p>
+              <h3 id="dash-low-stock" class="text-lg font-black text-amber-950 mt-0.5">0 صنف</h3>
+            </div>
+            <div class="stat-card stat-warn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-amber-800 mb-1" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
+              <p class="text-xs font-extrabold text-amber-900">قريب من الصلاحية</p>
+              <h3 id="dash-near-expiry" class="text-lg font-black text-amber-950 mt-0.5">0 صنف</h3>
+            </div>
+          </div>
+
+          <!-- شبكة الاختصارات الـ 12 -->
+          <div class="grid grid-cols-4 gap-2">
+            <button onclick="window.switchScreen('screen-pos')" class="shortcut-btn">
+              <span class="shortcut-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6" aria-hidden="true"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6" /><rect x="6" y="14" width="12" height="8" rx="1" /></svg></span>المبيعات
+            </button>
+            <button onclick="window.showInvoices()" class="shortcut-btn">
+              <span class="shortcut-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg></span>الفواتير
+            </button>
+            <button onclick="window.switchScreen('screen-inventory')" class="shortcut-btn">
+              <span class="shortcut-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6" aria-hidden="true"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z" /><path d="m8.5 8.5 7 7" /></svg></span>الأدوية
+            </button>
+            <button onclick="window.switchScreen('screen-inventory')" class="shortcut-btn">
+              <span class="shortcut-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6" aria-hidden="true"><path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z" /><path d="m7 16.5-4.74-2.85" /><path d="m7 16.5 5-3" /><path d="M7 16.5v5.17" /><path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z" /><path d="m17 16.5-5-3" /><path d="m17 16.5 4.74-2.85" /><path d="M17 16.5v5.17" /><path d="M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z" /><path d="M12 8 7.26 5.15" /><path d="m12 8 4.74-2.85" /><path d="M12 13.5V8" /></svg></span>المخزون
+            </button>
+            <button onclick="window.showPurchases()" class="shortcut-btn">
+              <span class="shortcut-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6" aria-hidden="true"><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></svg></span>المشتريات
+            </button>
+            <button onclick="window.showSuppliers()" class="shortcut-btn">
+              <span class="shortcut-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6" aria-hidden="true"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" /><path d="M15 18H9" /><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14" /><circle cx="17" cy="18" r="2" /><circle cx="7" cy="18" r="2" /></svg></span>الموردون
+            </button>
+            <button onclick="window.showReports()" class="shortcut-btn">
+              <span class="shortcut-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6" aria-hidden="true"><path d="M12 16v5" /><path d="M16 14v7" /><path d="M20 10v11" /><path d="m22 3-8.646 8.646a.5.5 0 0 1-.708 0L9.354 8.354a.5.5 0 0 0-.707 0L2 15" /><path d="M4 18v3" /><path d="M8 14v7" /></svg></span>التقارير
+            </button>
+            <button onclick="window.showBranches()" class="shortcut-btn">
+              <span class="shortcut-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6" aria-hidden="true"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" /><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" /><path d="M2 7h20" /><path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7" /></svg></span>الفروع
+            </button>
+            <button onclick="window.showEmployees()" class="shortcut-btn">
+              <span class="shortcut-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg></span>الموظفون
+            </button>
+            <button onclick="window.showAdminLogin()" class="shortcut-btn">
+              <span class="shortcut-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></svg></span>الإعدادات
+            </button>
+            <button onclick="window.showBackupAndRestore()" class="shortcut-btn">
+              <span class="shortcut-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6" aria-hidden="true"><path d="M12 13v8" /><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" /><path d="m8 17 4-4 4 4" /></svg></span>النسخ الاحتياطي
+            </button>
+            <button onclick="window.switchScreen('screen-pos'); window.scanBarcode('pos')" class="shortcut-btn">
+              <span class="shortcut-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" /><path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" /><path d="M8 7v10" /><path d="M12 7v10" /><path d="M17 7v10" /></svg></span>الباركود
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. شاشة الأدوية والمخزون -->
+      <div id="screen-inventory" class="screen-view hidden">
+        <div class="sub-header flex justify-between items-center">
+          <button onclick="window.switchScreen('screen-home')" class="p-2 rounded-xl bg-white/10" aria-label="رجوع">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+          </button>
+          <div class="flex items-center gap-2">
+            <h2 class="text-xl font-black">الأدوية والمخزون</h2>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-amber-300" aria-hidden="true"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z" /><path d="m8.5 8.5 7 7" /></svg>
+          </div>
+          <div class="w-8"></div>
+        </div>
+
+        <div class="px-3.5 -mt-4 space-y-3">
+          <div class="bg-white rounded-2xl shadow-md px-3.5 py-2.5 flex items-center gap-2 border border-slate-200">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-slate-400" aria-hidden="true"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+            <input id="inv-search" oninput="window.filterInventoryText(this.value)" type="text" placeholder="البحث عن دواء (الاسم أو الباركود)" class="flex-1 text-xs font-bold focus:outline-none bg-transparent">
+            <button onclick="window.scanBarcode('inv')" class="p-1.5 rounded-lg bg-emerald-50 text-emerald-800" aria-label="مسح الباركود">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" /><path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" /><path d="M8 7v10" /><path d="M12 7v10" /><path d="M17 7v10" /></svg>
+            </button>
+          </div>
+
+          <div class="flex gap-2 overflow-x-auto text-xs font-extrabold">
+            <button onclick="window.filterInventory('all', this)" class="inv-filter-btn px-4 py-2 rounded-full bg-emerald-800 text-white shadow">الكل</button>
+            <button onclick="window.filterInventory('low_stock', this)" class="inv-filter-btn px-4 py-2 rounded-full bg-white text-slate-700 border border-slate-200">منخفض المخزون</button>
+            <button onclick="window.filterInventory('near_expiry', this)" class="inv-filter-btn px-4 py-2 rounded-full bg-white text-slate-700 border border-slate-200">قريب من الصلاحية</button>
+          </div>
+
+          <div id="inventory-cards-container" class="space-y-2.5"></div>
+
+          <button onclick="window.switchScreen('screen-add-product')" class="gold-cta w-full py-3.5 text-base flex items-center justify-center gap-2 mt-2">
+            <span>+ إضافة دواء جديد</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. شاشة المبيعات (نقطة البيع) -->
+      <div id="screen-pos" class="screen-view hidden">
+        <div class="sub-header flex justify-between items-center">
+          <button onclick="window.switchScreen('screen-home')" class="p-2 rounded-xl bg-white/10" aria-label="رجوع">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+          </button>
+          <div class="flex items-center gap-2">
+            <h2 class="text-xl font-black">المبيعات (نقطة البيع)</h2>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-amber-300" aria-hidden="true"><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></svg>
+          </div>
+          <div class="w-8"></div>
+        </div>
+
+        <div class="px-3.5 -mt-4 space-y-3">
+          <div class="bg-white rounded-2xl shadow-md px-3.5 py-2.5 flex items-center gap-2 border border-slate-200 relative">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-slate-400" aria-hidden="true"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+            <input id="pos-search" oninput="window.searchPosQuick(this.value)" type="text" placeholder="البحث عن دواء أو مسح الباركود" class="flex-1 text-xs font-bold focus:outline-none bg-transparent">
+            <button onclick="window.scanBarcode('pos')" class="p-1.5 rounded-lg bg-emerald-50 text-emerald-800" aria-label="مسح الباركود">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" /><path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" /><path d="M8 7v10" /><path d="M12 7v10" /><path d="M17 7v10" /></svg>
+            </button>
+            <div id="pos-quick-results" class="hidden absolute top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-xl border border-slate-200 z-30 max-h-48 overflow-y-auto"></div>
+          </div>
+
+          <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200 space-y-3">
+            <div id="cart-items-container" class="space-y-2.5 max-h-72 overflow-y-auto"></div>
+
+            <div class="border-t border-slate-100 pt-3 space-y-2 text-xs font-extrabold">
+              <div class="flex justify-between text-slate-600">
+                <span>الإجمالي الفرعي</span>
+                <span id="cart-subtotal">£0.00</span>
+              </div>
+              <div class="flex justify-between items-center text-slate-600">
+                <span class="flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 text-emerald-700" aria-hidden="true"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" /><circle cx="7.5" cy="7.5" r=".5" fill="currentColor" /></svg> الخصم</span>
+                <input id="pos-discount" oninput="window.renderCart()" type="number" inputmode="decimal" min="0" step="0.5" value="0" class="w-20 text-left bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 font-extrabold">
+              </div>
+              <div class="bg-gradient-to-l from-amber-100 to-amber-200/80 rounded-xl px-3.5 py-2.5 flex justify-between items-center border border-amber-300">
+                <span class="text-sm font-black text-emerald-950 flex items-center gap-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-amber-700" aria-hidden="true"><circle cx="8" cy="8" r="6" /><path d="M18.09 10.37A6 6 0 1 1 10.34 18" /><path d="M7 6h1v4" /><path d="m16.71 13.88.7.71-2.82 2.82" /></svg> الإجمالي النهائي
+                </span>
+                <span id="cart-final-total" class="text-xl font-black text-emerald-950">£0.00</span>
+              </div>
+            </div>
+          </div>
+
+          <button onclick="window.checkout()" class="gold-cta w-full py-3.5 text-base flex items-center justify-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5" aria-hidden="true"><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></svg>
+            <span>إتمام البيع وإصدار الفاتورة</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 4. شاشة إضافة دواء جديد -->
+      <div id="screen-add-product" class="screen-view hidden">
+        <div class="sub-header flex justify-between items-center">
+          <button onclick="window.switchScreen('screen-inventory')" class="p-2 rounded-xl bg-white/10" aria-label="رجوع">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+          </button>
+          <h2 class="text-xl font-black">إضافة دواء جديد</h2>
+          <div class="w-8"></div>
+        </div>
+        <form id="add-product-form" onsubmit="window.addNewProduct(event)" class="p-4 space-y-3">
+          <div class="bg-white p-4 rounded-2xl shadow-sm space-y-3 border border-slate-200">
+            <div>
+              <label class="block text-xs font-extrabold mb-1">اسم الدواء التجاري</label>
+              <input type="text" id="new-name" required placeholder="مثال: بانادول 500 مجم" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold">
+            </div>
+            <div>
+              <label class="block text-xs font-extrabold mb-1">الاسم العلمي (Generic)</label>
+              <input type="text" id="new-generic" required placeholder="Paracetamol 500 mg" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold">
+            </div>
+            <div>
+              <label class="block text-xs font-extrabold mb-1">الباركود</label>
+              <div class="flex gap-2">
+                <input type="text" id="new-barcode" required placeholder="امسح أو اكتب الباركود" class="flex-1 bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold">
+                <button type="button" onclick="window.scanBarcode('new')" class="px-3.5 rounded-xl bg-emerald-800 text-white font-bold" aria-label="مسح الباركود">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" /><path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" /><path d="M8 7v10" /><path d="M12 7v10" /><path d="M17 7v10" /></svg>
+                </button>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="block text-xs font-extrabold mb-1">سعر البيع</label>
+                <input type="number" inputmode="decimal" step="0.01" id="new-price" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold">
+              </div>
+              <div>
+                <label class="block text-xs font-extrabold mb-1">الكمية بالمخزون</label>
+                <input type="number" inputmode="numeric" min="0" step="1" id="new-qty" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-extrabold mb-1">تاريخ انتهاء الصلاحية</label>
+              <input type="date" id="new-expiry" required class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-xs font-bold">
+            </div>
+          </div>
+          <button type="submit" class="gold-cta w-full py-3.5 text-base">حفظ الدواء في المخزون</button>
+        </form>
+      </div>
+
+    </div>
+
+    <!-- شريط التنقل السفلي -->
+    <nav class="bottom-nav fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto flex justify-between items-center text-[11px] font-extrabold z-40">
+      <button onclick="window.switchScreen('screen-home')" id="nav-home" class="nav-btn flex flex-col items-center gap-1 text-amber-300">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" /><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg><span>الرئيسية</span>
+      </button>
+      <button onclick="window.switchScreen('screen-pos')" id="nav-pos" class="nav-btn flex flex-col items-center gap-1 text-white/85">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5" aria-hidden="true"><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></svg><span>المبيعات</span>
+      </button>
+      <button onclick="window.switchScreen('screen-inventory')" id="nav-inv" class="nav-btn flex flex-col items-center gap-1 text-white/85">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5" aria-hidden="true"><path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z" /><path d="m7 16.5-4.74-2.85" /><path d="m7 16.5 5-3" /><path d="M7 16.5v5.17" /><path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z" /><path d="m17 16.5-5-3" /><path d="m17 16.5 4.74-2.85" /><path d="M17 16.5v5.17" /><path d="M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z" /><path d="M12 8 7.26 5.15" /><path d="m12 8 4.74-2.85" /><path d="M12 13.5V8" /></svg><span>المخزون</span>
+      </button>
+      <button onclick="window.showReports()" class="nav-btn flex flex-col items-center gap-1 text-white/85">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5" aria-hidden="true"><line x1="12" x2="12" y1="20" y2="10" /><line x1="18" x2="18" y1="20" y2="4" /><line x1="6" x2="6" y1="20" y2="16" /></svg><span>التقارير</span>
+      </button>
+      <button onclick="window.showBackupAndRestore()" class="nav-btn flex flex-col items-center gap-1 text-white/85">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5" aria-hidden="true"><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" /></svg><span>المزيد</span>
+      </button>
+    </nav>
+  </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
