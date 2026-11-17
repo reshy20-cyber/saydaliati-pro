@@ -18,6 +18,8 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npx cap add ios
+      - name: Generate app icons
+        run: npx --yes @capacitor/assets generate --ios
 
       - name: Info.plist and version
         run: |
