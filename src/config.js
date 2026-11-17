@@ -10,6 +10,8 @@ export const CONFIG = {
   // روابط إلزامية لدى Apple وGoogle للتطبيقات ذات الاشتراكات
   privacyUrl: 'https://saydaliati-pro.vercel.app/privacy.html',
   termsUrl: 'https://saydaliati-pro.vercel.app/terms.html',
+  // حسابات مراجعة المتاجر (Google/Apple): اشتراكها يُعدّ فعّالاً دائماً. لا تضف إلا حساباً مخصصاً للمراجعين.
+  reviewerEmails: ['review@reshy-apps.com'],
   // أيام سماح بعد انتهاء الاشتراك (لحالات إعادة محاولة الدفع)
   graceDays: 2
 };

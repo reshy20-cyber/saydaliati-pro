@@ -30,7 +30,10 @@ export const WRITE_PERMS = new Set(['sell', 'editStock', 'purchases', 'suppliers
 
 export const can = perm => isCloud() && (ROLE_PERMS[role()] || []).includes(perm);
 
+export const isReviewer = () => !!S.session.user?.email && (CONFIG.reviewerEmails || []).includes(S.session.user.email.toLowerCase());
+
 export function subscriptionActive() {
+  if (isReviewer()) return true;
   const sub = S.session.pharmacy?.subscription;
   if (!sub || !sub.active) return false;
   if (!sub.expiresAt) return true;

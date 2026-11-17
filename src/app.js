@@ -1,7 +1,7 @@
 import { auth, db } from './firebase.js';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { getDoc, onSnapshot, updateDoc, writeBatch, increment } from 'firebase/firestore';
-import { S, hooks, isCloud, role, can, subscriptionActive, activeBranch, allowedBranches, requireCan, getCurrencySymbol } from './state.js';
+import { S, hooks, isCloud, role, can, subscriptionActive, isReviewer, activeBranch, allowedBranches, requireCan, getCurrencySymbol } from './state.js';
 import { escapeHtml, todayLocal, round2, uuid, validStock, fefoBatches, shareText, isNative } from './util.js';
 import { userRef, pharmacyRef, memberRef, branchesCol, branchCol, branchDoc, commitBatch, MAX_INVOICE_LINES } from './data.js';
 import { toast } from './ui.js';
@@ -203,7 +203,7 @@ async function syncSubscription(ent) {
   } catch (e) { console.warn('تعذر تحديث حالة الاشتراك', e); }
 }
 async function setupBilling() {
-  if (role() !== 'owner') return;
+  if (role() !== 'owner' || isReviewer()) return;
   try {
     const ok = await initBilling(S.session.pharmacyId, ent => syncSubscription(ent));
     if (!ok) return;

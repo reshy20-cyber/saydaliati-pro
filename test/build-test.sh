@@ -5,7 +5,7 @@ cd /home/claude/proj
 rm -rf /tmp/testsrc /tmp/testwww && mkdir -p /tmp/testsrc /tmp/testwww
 cp -r src/* /tmp/testsrc/
 cat > /tmp/testsrc/config.js <<'CFG'
-export const CONFIG = { revenueCat: { androidApiKey: 'goog_test', iosApiKey: 'appl_test', entitlementId: 'pro' }, privacyUrl: 'https://example.com/privacy', termsUrl: 'https://example.com/terms', graceDays: 2 };
+export const CONFIG = { revenueCat: { androidApiKey: 'goog_test', iosApiKey: 'appl_test', entitlementId: 'pro' }, privacyUrl: 'https://example.com/privacy', termsUrl: 'https://example.com/terms', graceDays: 2, reviewerEmails: ['review@reshy-apps.com'] };
 CFG
 cp -r www/* /tmp/testwww/
 M=/home/claude/proj/test/mocks
