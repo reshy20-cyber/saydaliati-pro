@@ -467,11 +467,16 @@ function showElectronicInvoice(invoice, queued = false) {
     });
   }
   document.getElementById('invoice-close-btn').onclick = () => overlay.remove();
-  document.getElementById('share-wa-btn').onclick = () => {
+  document.getElementById('share-wa-btn').onclick = async () => {
     const lines = invoice.items.map(i => `• ${i.name} (${i.quantity} × ${c} ${Number(i.unitPrice).toFixed(2)})`).join('\n');
-    shareText('فاتورة ' + invoice.id, `*${shopName}*\nفاتورة رقم: ${invoice.id}\n${lines}\n*الإجمالي النهائي: ${c} ${Number(invoice.total).toFixed(2)}*`);
+    const shared = await shareText('فاتورة ' + invoice.id, `*${shopName}*\nفاتورة رقم: ${invoice.id}\n${lines}\n*الإجمالي النهائي: ${c} ${Number(invoice.total).toFixed(2)}*`);
+    if (shared) overlay.remove();
   };
-  document.getElementById('print-btn').onclick = () => { if (isNative()) document.getElementById('share-wa-btn').click(); else window.print(); };
+  document.getElementById('print-btn').onclick = () => {
+    if (isNative()) { document.getElementById('share-wa-btn').click(); return; }
+    window.addEventListener('afterprint', () => overlay.remove(), { once: true });
+    window.print();
+  };
 }
 
 window.checkout = async () => {

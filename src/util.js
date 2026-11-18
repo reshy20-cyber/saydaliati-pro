@@ -14,13 +14,15 @@ export const isNative = () => !!window.Capacitor?.isNativePlatform?.();
 export const nativePlugin = name => (isNative() ? window.Capacitor?.Plugins?.[name] : null);
 export const isCancel = e => e && (e.name === 'AbortError' || /cancel/i.test(String(e.message || '')));
 
+// تُرجع true إذا تمت المشاركة، وfalse إذا ألغاها المستخدم
 export async function shareText(title, text) {
   try {
     const Share = nativePlugin('Share');
-    if (Share) { await Share.share({ title, text, dialogTitle: title }); return; }
-    if (navigator.share) { await navigator.share({ title, text }); return; }
-  } catch (e) { if (isCancel(e)) return; }
+    if (Share) { await Share.share({ title, text, dialogTitle: title }); return true; }
+    if (navigator.share) { await navigator.share({ title, text }); return true; }
+  } catch (e) { if (isCancel(e)) return false; }
   window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+  return true;
 }
 
 export async function exportTextFile(filename, mime, content) {
