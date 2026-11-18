@@ -61,14 +61,16 @@ function loadDemo() {
   } catch (e) {}
   return emptyState();
 }
+let demoReady = false; // لا نحفظ قبل تحميل البيانات المحفوظة، وإلا تُمسح عند كل تحديث للصفحة
 function saveDemo() {
-  if (S.session.user) return;
+  if (S.session.user || !demoReady) return;
   try { localStorage.setItem(DEMO_KEY, JSON.stringify({ inventory: S.state.inventory, dailySales: S.state.dailySales })); } catch (e) {}
 }
 function enterDemoMode() {
   sessionToken++;
   stopSession();
   S.state = loadDemo();
+  demoReady = true;
   S.cart = [];
   setBranchLabel();
   updateUI();
@@ -712,6 +714,7 @@ document.addEventListener('click', event => {
 window.addEventListener('online', updateSyncLabel);
 window.addEventListener('offline', updateSyncLabel);
 document.addEventListener('visibilitychange', () => { if (document.hidden) saveDemo(); });
+window.addEventListener('pagehide', saveDemo);
 setInterval(saveDemo, 15000);
 // عند تغيّر اليوم أثناء بقاء التطبيق مفتوحاً: أعد ربط مبيعات اليوم
 setInterval(() => { if (isCloud() && dailyDate && dailyDate !== todayLocal()) selectBranch(S.session.branchId); }, 60000);
