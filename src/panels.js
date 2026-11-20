@@ -11,7 +11,7 @@ import { CONFIG } from './config.js';
 import { S, hooks, isCloud, role, can, ROLE_LABELS, licenseActive, licenseTier, maxBranches, activeBranchCount, activeBranch, allowedBranches, requireCan, requireOnlineWrite, getCurrencySymbol } from './state.js';
 import { adminPanel, adminText, adminField, adminSelect, adminCheckList, adminButton, adminRow, toast } from './ui.js';
 import {
-  userRef, pharmacyRef, membersCol, memberRef, suppliersCol, branchesCol, branchRef, branchCol, branchDoc,
+  userRef, pharmacyRef, membersCol, memberRef, suppliersCol, devicesCol, branchesCol, branchRef, branchCol, branchDoc,
   commitBatch, writeChunked, deleteAllDocs
 } from './data.js';
 import { todayLocal, uuid, round2, exportTextFile, isCancel } from './util.js';
@@ -202,6 +202,7 @@ function showDeleteAccount() {
             await deleteDoc(branchRef(id, b.id));
           }
           await deleteAllDocs(suppliersCol(id));
+          await deleteAllDocs(devicesCol(id));
           const members = await getDocs(membersCol(id));
           for (const m of members.docs) {
             if (m.id === user.uid) continue;

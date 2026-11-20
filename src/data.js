@@ -13,6 +13,7 @@ export const userRef = uid => doc(db, 'users', uid);
 export const pharmacyRef = pid => doc(db, 'pharmacies', pid);
 export const membersCol = pid => collection(db, 'pharmacies', pid, 'members');
 export const memberRef = (pid, uid) => doc(db, 'pharmacies', pid, 'members', uid);
+export const devicesCol = pid => collection(db, 'pharmacies', pid, 'devices');
 export const suppliersCol = pid => collection(db, 'pharmacies', pid, 'suppliers');
 export const branchesCol = pid => collection(db, 'pharmacies', pid, 'branches');
 export const branchRef = (pid, bid) => doc(db, 'pharmacies', pid, 'branches', bid);

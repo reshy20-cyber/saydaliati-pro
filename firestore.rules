@@ -46,8 +46,8 @@ service cloud.firestore {
 
       // الأجهزة المصرح بها: يسجّلها الخادم فقط، والمالك يقرؤها
       match /devices/{id} {
-        allow read: if isOwner(pid);
-        allow write: if false;
+        allow read, delete: if isOwner(pid); // الحذف للمالك عند حذف حسابه (لا تُترك بيانات الأجهزة يتيمة)
+        allow create, update: if false;
       }
 
       match /suppliers/{id} {
