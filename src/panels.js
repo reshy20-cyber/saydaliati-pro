@@ -8,14 +8,15 @@ import {
   query, where, orderBy, limit
 } from 'firebase/firestore';
 import { CONFIG } from './config.js';
-import { S, hooks, isCloud, role, can, ROLE_LABELS, subscriptionActive, activeBranch, allowedBranches, requireCan, requireOnlineWrite, getCurrencySymbol } from './state.js';
+import { S, hooks, isCloud, role, can, ROLE_LABELS, licenseActive, licenseTier, maxBranches, activeBranchCount, activeBranch, allowedBranches, requireCan, requireOnlineWrite, getCurrencySymbol } from './state.js';
 import { adminPanel, adminText, adminField, adminSelect, adminCheckList, adminButton, adminRow, toast } from './ui.js';
 import {
-  userRef, pharmacyRef, membersCol, memberRef, suppliersCol, branchesCol, branchRef, branchCol, branchDoc,
+  userRef, pharmacyRef, membersCol, memberRef, suppliersCol, devicesCol, branchesCol, branchRef, branchCol, branchDoc,
   commitBatch, writeChunked, deleteAllDocs
 } from './data.js';
 import { todayLocal, uuid, round2, exportTextFile, isCancel } from './util.js';
-import { isNativeApp, isBillingConfigured, getPackages, purchase, restore, getEntitlement, wasCancelled, logoutBilling } from './billing.js';
+import { isNativeApp, isBillingConfigured, getPackages, purchase, restore, wasCancelled, logoutBilling, BASE_PRODUCT, EXTRA_PRODUCT, productKey } from './billing.js';
+import { syncLicense, registerDevice, listDevices, removeDevice, getDeviceId } from './license.js';
 
 const fmtDate = iso => { try { return new Date(iso).toLocaleDateString('ar-EG'); } catch { return String(iso || ''); } };
 const pid = () => S.session.pharmacyId;
@@ -56,7 +57,7 @@ async function createPharmacy(user, { pharmacyName, ownerName }) {
   const pRef = doc(collection(db, 'pharmacies'));
   const id = pRef.id;
   const now = new Date().toISOString();
-  await setDoc(pRef, { name: pharmacyName, ownerUid: user.uid, createdAt: now, subscription: { active: false } });
+  await setDoc(pRef, { name: pharmacyName, ownerUid: user.uid, createdAt: now });
   try {
     // عضوية المالك أولاً: قواعد الأمان تتحقق من العضوية قبل السماح بإنشاء الفرع
     const batch = writeBatch(db);
@@ -155,17 +156,17 @@ export function showAccount() {
   if (!isCloud()) return showCreatePharmacy();
   const { panel } = adminPanel('حسابي والإعدادات');
   const ph = S.session.pharmacy;
-  const sub = ph?.subscription;
-  const subText = subscriptionActive()
-    ? 'فعّال ✓' + (sub?.expiresAt ? ' حتى ' + fmtDate(sub.expiresAt) : '')
-    : 'غير فعّال';
+  const subText = licenseActive()
+    ? `فعّال ✓ — ${licenseTier()} ${licenseTier() === 1 ? 'صيدلية' : 'صيدليات'}`
+    : 'غير مفعّل';
   const info = adminText(panel,
-    `البريد: ${S.session.user.email}\nالصيدلية: ${ph?.name || ''}\nالدور: ${ROLE_LABELS[role()] || ''}\nالفرع الحالي: ${activeBranch()?.name || '—'}\nالاشتراك: ${subText}`);
+    `البريد: ${S.session.user.email}\nالصيدلية: ${ph?.name || ''}\nالدور: ${ROLE_LABELS[role()] || ''}\nالفرع الحالي: ${activeBranch()?.name || '—'}\nالترخيص: ${subText}`);
   info.style.cssText += ';background:#ecfdf5;border:1px solid #a7f3d0;border-radius:14px;padding:12px;font-weight:700';
 
   adminButton(panel, '🏪 الفروع وتبديل الفرع', () => showBranches());
   if (can('employees')) adminButton(panel, '👥 الموظفون والصلاحيات', () => showEmployees());
-  if (role() === 'owner') adminButton(panel, subscriptionActive() ? '⭐ إدارة الاشتراك' : '⭐ تفعيل الاشتراك', () => showPaywall(), subscriptionActive() ? 'primary' : 'gold');
+  if (role() === 'owner') adminButton(panel, licenseActive() ? '⭐ إدارة الترخيص وإضافة صيدلية' : '⭐ تفعيل الترخيص', () => showPaywall(), licenseActive() ? 'primary' : 'gold');
+  if (role() === 'owner') adminButton(panel, '📱 الأجهزة المصرح بها', () => showDevices(), 'primary');
   adminButton(panel, '💱 العملة (' + getCurrencySymbol() + ')', () => showCurrencySettings());
   adminButton(panel, '📷 فحص صلاحيات الكاميرا والتخزين', () => window.requestCameraAndStoragePermissions(), 'teal');
   adminButton(panel, 'تسجيل الخروج', async () => { document.getElementById('saydaliati-admin-panel')?.remove(); await hooks.logout(); }, 'plain');
@@ -176,7 +177,7 @@ function showDeleteAccount() {
   const { panel, overlay } = adminPanel('حذف الحساب نهائياً');
   const owner = role() === 'owner';
   const warn = adminText(panel, owner
-    ? 'سيتم حذف حسابك وكل بيانات الصيدلية (الفروع والأصناف والفواتير والموظفين) ولا يمكن التراجع.\nحذف الحساب لا يُلغي اشتراكك في المتجر؛ ألغِه من إعدادات Google Play أو App Store.'
+    ? 'سيتم حذف حسابك وكل بيانات الصيدلية (الفروع والأصناف والفواتير والموظفين) ولا يمكن التراجع.\nحذف الحساب لا يُرجع مبلغ الترخيص؛ طلبات الاسترداد تتم عبر المتجر وفق سياسته.'
     : 'سيتم حذف حسابك وإزالتك من الصيدلية. لن تتأثر بيانات الصيدلية.');
   warn.style.cssText += ';color:#991b1b;font-weight:800';
   const pw = adminField(panel, 'أدخل كلمة المرور للتأكيد', 'password');
@@ -201,6 +202,7 @@ function showDeleteAccount() {
             await deleteDoc(branchRef(id, b.id));
           }
           await deleteAllDocs(suppliersCol(id));
+          await deleteAllDocs(devicesCol(id));
           const members = await getDocs(membersCol(id));
           for (const m of members.docs) {
             if (m.id === user.uid) continue;
@@ -221,41 +223,99 @@ function showDeleteAccount() {
   }, 'danger');
 }
 
-// ================= الاشتراك =================
+// ================= الترخيص =================
 export async function showPaywall() {
-  const { panel } = adminPanel('اشتراك صيدليتي PRO');
+  const { panel } = adminPanel('ترخيص صيدليتي PRO');
+  const tier = licenseTier();
   const head = adminText(panel,
-    'الاشتراك يفتح: المزامنة السحابية، تعدد الفروع، الموظفون وصلاحياتهم، المبيعات والمشتريات والمرتجعات والتقارير.');
+    'الترخيص يُدفع مرة واحدة بلا تجديد، ولكل صيدلية إضافية ترخيص مستقل. يفتح: المزامنة السحابية، تعدد الصيدليات (الفروع)، الموظفون وصلاحياتهم، المبيعات والمشتريات والمرتجعات والتقارير.\nلكل صيدلية مرخّصة 3 أجهزة مصرح بها.');
   head.style.fontWeight = '700';
-  const state = adminText(panel, subscriptionActive()
-    ? 'اشتراكك فعّال ✓' + (S.session.pharmacy?.subscription?.expiresAt ? ' حتى ' + fmtDate(S.session.pharmacy.subscription.expiresAt) : '')
-    : 'الاشتراك غير فعّال حالياً — يمكنك عرض بياناتك وتصديرها، لكن لا يمكن إضافة عمليات جديدة.');
+  const state = adminText(panel, licenseActive()
+    ? `ترخيصك فعّال ✓ — ${tier} ${tier === 1 ? 'صيدلية' : 'صيدليات'} (حتى ${S.session.pharmacy?.license?.maxDevices || tier * 3} أجهزة)`
+    : 'لا يوجد ترخيص — يمكنك عرض بياناتك وتصديرها، لكن لا يمكن إضافة عمليات جديدة.');
   state.style.cssText += ';background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px;font-weight:800';
 
-  if (role() !== 'owner') { adminText(panel, 'الاشتراك يديره مالك الصيدلية فقط.'); return; }
-  if (!isNativeApp()) { adminText(panel, 'يتم الاشتراك من داخل تطبيق الجوال (Google Play أو App Store) فقط. افتح التطبيق على جوالك.'); return; }
+  if (role() !== 'owner') { adminText(panel, 'الترخيص يديره مالك الصيدلية فقط.'); return; }
+  if (!isNativeApp()) { adminText(panel, 'الشراء يتم من داخل تطبيق الجوال (Google Play أو App Store) فقط. افتح التطبيق على جوالك.'); return; }
   if (!isBillingConfigured()) { adminText(panel, 'لم تُضبط مفاتيح الدفع بعد. راجع ملف src/config.js.'); return; }
 
   const msg = adminText(panel, 'جارٍ تحميل الباقات…');
-  const finish = async ent => {
-    await hooks.syncSubscription(ent);
-    msg.textContent = ent.active ? 'تم تفعيل الاشتراك ✓' : 'لا يوجد اشتراك فعّال على هذا الحساب في المتجر.';
+  // الخادم يتحقق من الشراء ويكتب الترخيص؛ نعيد المحاولة قليلاً لأن RevenueCat قد يتأخر ثوانٍ
+  const activate = async () => {
+    msg.textContent = 'جارٍ تفعيل الترخيص…';
+    for (let i = 0; i < 4; i++) {
+      try {
+        const { license } = await syncLicense(pid());
+        if (license && license.tier > tier) { msg.textContent = 'تم تفعيل الترخيص ✓'; return; }
+      } catch (e) { console.warn('syncLicense', e); }
+      await new Promise(r => setTimeout(r, 2500));
+    }
+    msg.textContent = 'تم الدفع، وسيظهر الترخيص خلال دقائق. إن تأخر فاضغط "استعادة مشترياتي".';
   };
   try {
     const packages = await getPackages();
-    msg.textContent = packages.length ? 'اختر الباقة:' : 'لا توجد باقات متاحة حالياً. تأكد من إعداد المنتجات في المتجر وRevenueCat.';
-    for (const pkg of packages) {
-      adminButton(panel, `${pkg.product.title} — ${pkg.product.priceString}`, async () => {
-        try { await finish(await purchase(pkg)); }
+    const byKey = new Map(packages.map(p => [productKey(p), p]));
+    const offers = tier === 0
+      ? [{ id: BASE_PRODUCT, label: 'ترخيص الصيدلية الرئيسية' }]
+      : [{ id: EXTRA_PRODUCT, label: 'إضافة صيدلية (فرع) جديدة' }];
+    const available = offers.filter(o => byKey.has(o.id));
+    msg.textContent = available.length ? (tier ? 'لإضافة صيدلية جديدة (ترخيص مستقل لكل صيدلية):' : 'اختر الباقة:') : 'لا توجد باقات متاحة حالياً. تأكد من إعداد المنتجات في المتجر وRevenueCat.';
+    for (const o of available) {
+      const pkg = byKey.get(o.id);
+      adminButton(panel, `${o.label} — ${pkg.product.priceString}`, async () => {
+        try { await purchase(pkg); await activate(); }
         catch (e) { if (!wasCancelled(e)) msg.textContent = 'تعذر إتمام الشراء: ' + (e.message || e); }
       }, 'gold');
     }
   } catch (e) { msg.textContent = 'تعذر تحميل الباقات: ' + (e.message || e); }
   adminButton(panel, 'استعادة مشترياتي', async () => {
-    try { await finish(await restore()); } catch (e) { msg.textContent = 'تعذرت الاستعادة: ' + (e.message || e); }
+    try { await restore(); await activate(); } catch (e) { msg.textContent = 'تعذرت الاستعادة: ' + (e.message || e); }
   }, 'plain');
-  adminText(panel, 'يتجدد الاشتراك تلقائياً ما لم تُلغه قبل 24 ساعة على الأقل من نهاية الفترة الحالية. يُحاسَب حسابك في المتجر عند تأكيد الشراء، ويمكنك إدارة الاشتراك أو إلغاءه في أي وقت من إعدادات حسابك في Google Play أو App Store.').style.cssText += ';font-size:11px;color:#475569';
+  adminText(panel, 'الدفع مرة واحدة عبر حسابك في المتجر ولا يتجدد. الترخيص مرتبط بحساب الصيدلية ويعمل على أجهزتها المصرح بها فقط.').style.cssText += ';font-size:11px;color:#475569';
   legalLinks(panel);
+}
+
+// ================= الأجهزة المصرح بها =================
+export async function showDevices({ blocked = false } = {}) {
+  const { panel, close, overlay } = adminPanel('الأجهزة المصرح بها');
+  if (blocked) close.remove();
+  if (role() !== 'owner') { adminText(panel, 'يديرها مالك الصيدلية فقط.'); return; }
+  const msg = adminText(panel, 'جارٍ التحميل…');
+  const render = async () => {
+    try {
+      const { max, devices } = await listDevices(pid());
+      msg.textContent = (blocked ? 'بلغت صيدليتك الحد الأقصى للأجهزة. احذف جهازاً لا تستخدمه ليعمل هذا الجهاز.\n' : '') + `الأجهزة: ${devices.length} من ${max}`;
+      panel.querySelectorAll('[data-dev]').forEach(el => el.remove());
+      const me = getDeviceId();
+      for (const d of devices) {
+        const label = (d.id === me ? '✓ هذا الجهاز — ' : '') + (d.name || d.id.slice(0, 8)) + (d.lastSeen ? ' · ' + fmtDate(d.lastSeen) : '');
+        const btn = adminButton(panel, 'حذف: ' + label, async () => {
+          if (!confirm('حذف هذا الجهاز من القائمة المصرح بها؟')) return;
+          try {
+            await removeDevice(pid(), d.id);
+            if (blocked) { await registerDevice(pid()); S.session.deviceBlocked = false; overlay.remove(); toast('تم تفعيل هذا الجهاز'); return; }
+            render();
+          } catch (e) { msg.textContent = 'تعذر الحذف: ' + (e.message || e); }
+        }, d.id === me ? 'plain' : 'danger');
+        btn.dataset.dev = '1';
+      }
+    } catch (e) { msg.textContent = 'تعذر تحميل الأجهزة: ' + (e.message || e); }
+  };
+  if (blocked) adminButton(panel, 'تسجيل الخروج', async () => { overlay.remove(); await hooks.logout(); }, 'plain');
+  render();
+}
+
+// يُستدعى بعد الدخول: يسجّل الجهاز ويمنع الاستخدام إذا بلغت الصيدلية حدّ أجهزتها
+export async function enforceDeviceLimit() {
+  try {
+    await registerDevice(pid());
+    S.session.deviceBlocked = false;
+  } catch (e) {
+    if (e.status !== 409) { console.warn('registerDevice', e); return; } // بلا إنترنت أو خطأ مؤقت: لا نقطع العمل
+    S.session.deviceBlocked = true;
+    if (role() === 'owner') showDevices({ blocked: true });
+    else { alert(`بلغت الصيدلية الحد الأقصى للأجهزة المصرح بها (${e.data?.max || ''}). اطلب من مالك الصيدلية حذف جهاز قديم ثم سجّل الدخول من جديد.`); await hooks.logout(); }
+  }
 }
 
 // ================= الفروع =================
@@ -276,6 +336,11 @@ export function showBranches() {
     adminButton(panel, 'إضافة الفرع', async () => {
       if (!name.value.trim()) return status.textContent = 'أدخل اسم الفرع';
       if (!requireCan('branches') || !requireOnlineWrite()) return;
+      if (activeBranchCount() >= maxBranches()) {
+        status.textContent = `ترخيصك يسمح بـ ${maxBranches()} ${maxBranches() === 1 ? 'صيدلية' : 'صيدليات'} فقط. اشترِ ترخيص صيدلية إضافية لإضافة المزيد.`;
+        if (role() === 'owner') adminButton(panel, '⭐ إضافة ترخيص صيدلية', () => showPaywall(), 'gold');
+        return;
+      }
       try {
         const ref = doc(branchesCol(pid()));
         await setDoc(ref, { name: name.value.trim(), status: 'active', createdAt: new Date().toISOString() });

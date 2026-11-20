@@ -2,16 +2,18 @@
 export const CONFIG = {
   revenueCat: {
     // من لوحة RevenueCat ← Project ← API keys (مفاتيح عامة، آمنة داخل التطبيق)
-    androidApiKey: 'REPLACE_WITH_REVENUECAT_ANDROID_PUBLIC_KEY',
+    androidApiKey: 'goog_TyqaSylfSAcwWyiGpWFeeEEIXPn',
     iosApiKey: 'REPLACE_WITH_REVENUECAT_IOS_PUBLIC_KEY',
-    // اسم الـ Entitlement الذي تنشئه في RevenueCat ويرتبط بمنتجات الاشتراك
+    // الترخيص يُحسب على الخادم من مشتريات RevenueCat، فلا حاجة لاسم Entitlement هنا
     entitlementId: 'pro'
   },
-  // روابط إلزامية لدى Apple وGoogle للتطبيقات ذات الاشتراكات
+  // عنوان دوال الخادم (Vercel) المسؤولة عن الترخيص والأجهزة
+  apiBase: 'https://saydaliati-pro.vercel.app',
+  // روابط إلزامية لدى Apple وGoogle
   privacyUrl: 'https://saydaliati-pro.vercel.app/privacy.html',
   termsUrl: 'https://saydaliati-pro.vercel.app/terms.html',
-  // حسابات مراجعة المتاجر (Google/Apple): اشتراكها يُعدّ فعّالاً دائماً. لا تضف إلا حساباً مخصصاً للمراجعين.
+  // حسابات مراجعة المتاجر (Google/Apple): ترخيصها يُعدّ فعّالاً دائماً بأعلى باقة. لا تضف إلا حساباً مخصصاً للمراجعين.
   reviewerEmails: ['review@reshy-apps.com'],
-  // أيام سماح بعد انتهاء الاشتراك (لحالات إعادة محاولة الدفع)
-  graceDays: 2
+  // أعلى باقة (تُعطى لحسابات المراجعة)
+  maxTier: 5
 };
