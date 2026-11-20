@@ -17,12 +17,8 @@ async function sdk() {
 }
 
 // معرّفات المنتجات (يجب أن تطابق Google Play وapi/_lib.js)
-export const BASE_PRODUCTS = { pharmacy_1: 1, pharmacy_2: 2, pharmacy_3: 3, pharmacy_5: 5 };
-export const UPGRADES = [
-  { id: 'upgrade_1_to_2', from: 1, to: 2 },
-  { id: 'upgrade_2_to_3', from: 2, to: 3 },
-  { id: 'upgrade_3_to_5', from: 3, to: 5 }
-];
+export const BASE_PRODUCT = 'pharmacy_1';   // الترخيص الأول
+export const EXTRA_PRODUCT = 'pharmacy_extra'; // صيدلية (فرع) إضافية، تُشترى عدة مرات
 export const productKey = pkg => String(pkg?.product?.identifier || '').split(':')[0];
 
 // يربط المشتريات بمعرّف الصيدلية حتى تُستعاد على أي جهاز للمالك

@@ -15,7 +15,7 @@ import {
   commitBatch, writeChunked, deleteAllDocs
 } from './data.js';
 import { todayLocal, uuid, round2, exportTextFile, isCancel } from './util.js';
-import { isNativeApp, isBillingConfigured, getPackages, purchase, restore, wasCancelled, logoutBilling, BASE_PRODUCTS, UPGRADES, productKey } from './billing.js';
+import { isNativeApp, isBillingConfigured, getPackages, purchase, restore, wasCancelled, logoutBilling, BASE_PRODUCT, EXTRA_PRODUCT, productKey } from './billing.js';
 import { syncLicense, registerDevice, listDevices, removeDevice, getDeviceId } from './license.js';
 
 const fmtDate = iso => { try { return new Date(iso).toLocaleDateString('ar-EG'); } catch { return String(iso || ''); } };
@@ -165,7 +165,7 @@ export function showAccount() {
 
   adminButton(panel, '🏪 الفروع وتبديل الفرع', () => showBranches());
   if (can('employees')) adminButton(panel, '👥 الموظفون والصلاحيات', () => showEmployees());
-  if (role() === 'owner') adminButton(panel, licenseActive() ? '⭐ إدارة الترخيص والترقية' : '⭐ تفعيل الترخيص', () => showPaywall(), licenseActive() ? 'primary' : 'gold');
+  if (role() === 'owner') adminButton(panel, licenseActive() ? '⭐ إدارة الترخيص وإضافة صيدلية' : '⭐ تفعيل الترخيص', () => showPaywall(), licenseActive() ? 'primary' : 'gold');
   if (role() === 'owner') adminButton(panel, '📱 الأجهزة المصرح بها', () => showDevices(), 'primary');
   adminButton(panel, '💱 العملة (' + getCurrencySymbol() + ')', () => showCurrencySettings());
   adminButton(panel, '📷 فحص صلاحيات الكاميرا والتخزين', () => window.requestCameraAndStoragePermissions(), 'teal');
@@ -227,7 +227,7 @@ export async function showPaywall() {
   const { panel } = adminPanel('ترخيص صيدليتي PRO');
   const tier = licenseTier();
   const head = adminText(panel,
-    'الترخيص يُدفع مرة واحدة بلا تجديد. يفتح: المزامنة السحابية، تعدد الصيدليات (الفروع)، الموظفون وصلاحياتهم، المبيعات والمشتريات والمرتجعات والتقارير.\nلكل صيدلية مرخّصة 3 أجهزة مصرح بها.');
+    'الترخيص يُدفع مرة واحدة بلا تجديد، ولكل صيدلية إضافية ترخيص مستقل. يفتح: المزامنة السحابية، تعدد الصيدليات (الفروع)، الموظفون وصلاحياتهم، المبيعات والمشتريات والمرتجعات والتقارير.\nلكل صيدلية مرخّصة 3 أجهزة مصرح بها.');
   head.style.fontWeight = '700';
   const state = adminText(panel, licenseActive()
     ? `ترخيصك فعّال ✓ — ${tier} ${tier === 1 ? 'صيدلية' : 'صيدليات'} (حتى ${S.session.pharmacy?.license?.maxDevices || tier * 3} أجهزة)`
@@ -254,15 +254,11 @@ export async function showPaywall() {
   try {
     const packages = await getPackages();
     const byKey = new Map(packages.map(p => [productKey(p), p]));
-    const offers = [];
-    if (tier === 0) {
-      for (const [id, n] of Object.entries(BASE_PRODUCTS)) offers.push({ id, label: `ترخيص ${n} ${n === 1 ? 'صيدلية' : 'صيدليات'}` });
-    } else {
-      const up = UPGRADES.find(u => u.from === tier);
-      if (up) offers.push({ id: up.id, label: `ترقية إلى ${up.to} صيدليات` });
-    }
+    const offers = tier === 0
+      ? [{ id: BASE_PRODUCT, label: 'ترخيص الصيدلية الرئيسية' }]
+      : [{ id: EXTRA_PRODUCT, label: 'إضافة صيدلية (فرع) جديدة' }];
     const available = offers.filter(o => byKey.has(o.id));
-    msg.textContent = available.length ? (tier ? 'الترقية المتاحة:' : 'اختر الباقة:') : (tier && !offers.length ? 'لديك أعلى باقة ✓' : 'لا توجد باقات متاحة حالياً. تأكد من إعداد المنتجات في المتجر وRevenueCat.');
+    msg.textContent = available.length ? (tier ? 'لإضافة صيدلية جديدة (ترخيص مستقل لكل صيدلية):' : 'اختر الباقة:') : 'لا توجد باقات متاحة حالياً. تأكد من إعداد المنتجات في المتجر وRevenueCat.';
     for (const o of available) {
       const pkg = byKey.get(o.id);
       adminButton(panel, `${o.label} — ${pkg.product.priceString}`, async () => {
@@ -340,8 +336,8 @@ export function showBranches() {
       if (!name.value.trim()) return status.textContent = 'أدخل اسم الفرع';
       if (!requireCan('branches') || !requireOnlineWrite()) return;
       if (activeBranchCount() >= maxBranches()) {
-        status.textContent = `ترخيصك يسمح بـ ${maxBranches()} ${maxBranches() === 1 ? 'صيدلية' : 'صيدليات'} فقط. رقِّ الترخيص لإضافة المزيد.`;
-        if (role() === 'owner') adminButton(panel, '⭐ ترقية الترخيص', () => showPaywall(), 'gold');
+        status.textContent = `ترخيصك يسمح بـ ${maxBranches()} ${maxBranches() === 1 ? 'صيدلية' : 'صيدليات'} فقط. اشترِ ترخيص صيدلية إضافية لإضافة المزيد.`;
+        if (role() === 'owner') adminButton(panel, '⭐ إضافة ترخيص صيدلية', () => showPaywall(), 'gold');
         return;
       }
       try {

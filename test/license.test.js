@@ -1,20 +1,15 @@
-// اختبار حساب الباقة: node test/license.test.js
+// اختبار حساب الترخيص: node test/license.test.js
 const assert = require('assert');
-const { computeTier, buildLicense } = require('../api/_lib');
+const { computeBranches, buildLicense } = require('../api/_lib');
 
-assert.equal(computeTier([]), 0);
-assert.equal(computeTier(['pharmacy_1']), 1);
-assert.equal(computeTier(['pharmacy_5']), 5);
-assert.equal(computeTier(['pharmacy_1', 'upgrade_1_to_2']), 2);
-assert.equal(computeTier(['pharmacy_1', 'upgrade_1_to_2', 'upgrade_2_to_3', 'upgrade_3_to_5']), 5);
-// ترقية بلا باقة أساسية لا تُحتسب
-assert.equal(computeTier(['upgrade_2_to_3']), 0);
-// ترقية لا تنقص الباقة، والترقية الأدنى بعد شراء باقة أعلى لا أثر لها
-assert.equal(computeTier(['pharmacy_3', 'upgrade_1_to_2']), 3);
-// الترقية لا تتخطى مرحلة: من 1 إلى 3 تحتاج الترقيتين
-assert.equal(computeTier(['pharmacy_1', 'upgrade_2_to_3']), 1);
+assert.deepEqual(computeBranches({}), { branches: 0, extras: 0 });
+assert.deepEqual(computeBranches({ pharmacy_1: 1 }), { branches: 1, extras: 0 });
+assert.deepEqual(computeBranches({ pharmacy_1: 1, pharmacy_extra: 2 }), { branches: 3, extras: 2 });
+// الصيدلية الإضافية بلا الترخيص الأول لا تُحتسب
+assert.deepEqual(computeBranches({ pharmacy_extra: 3 }), { branches: 0, extras: 0 });
 // صيغة أندرويد product:basePlan
-assert.equal(computeTier(['pharmacy_2:default']), 2);
-const l = buildLicense(['pharmacy_2']);
+assert.equal(computeBranches({ 'pharmacy_1:default': 1, 'pharmacy_extra:default': 1 }).branches, 2);
+const l = buildLicense({ pharmacy_1: 1, pharmacy_extra: 1 });
 assert.deepEqual([l.tier, l.maxBranches, l.maxDevices], [2, 2, 6]);
+assert.equal(buildLicense({}).maxDevices, 3);
 console.log('license tests passed');

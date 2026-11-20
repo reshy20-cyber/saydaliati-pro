@@ -6,37 +6,28 @@ const admin = require('firebase-admin');
 const DEVICES_PER_PHARMACY = 3;
 
 // معرّفات المنتجات في Google Play / RevenueCat
-const BASE_PRODUCTS = { pharmacy_1: 1, pharmacy_2: 2, pharmacy_3: 3, pharmacy_5: 5 };
-const UPGRADES = [
-  { id: 'upgrade_1_to_2', from: 1, to: 2 },
-  { id: 'upgrade_2_to_3', from: 2, to: 3 },
-  { id: 'upgrade_3_to_5', from: 3, to: 5 }
-];
+// pharmacy_1: الترخيص الأول (غير مستهلك). pharmacy_extra: صيدلية (فرع) إضافية، تُشترى عدة مرات (مستهلك).
+const BASE_PRODUCT = 'pharmacy_1';
+const EXTRA_PRODUCT = 'pharmacy_extra';
 
 const baseId = id => String(id || '').split(':')[0]; // اشتراكات أندرويد تأتي بصيغة product:basePlan
 
-// يحسب الباقة من قائمة المنتجات المشتراة فعلاً. الترقية لا تُحتسب إلا إذا كانت الباقة السابقة مملوكة.
-function computeTier(productIds) {
-  const ids = new Set((productIds || []).map(baseId));
-  let tier = 0;
-  for (const [id, t] of Object.entries(BASE_PRODUCTS)) if (ids.has(id)) tier = Math.max(tier, t);
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const u of UPGRADES) {
-      if (ids.has(u.id) && tier >= u.from && tier < u.to) { tier = u.to; changed = true; }
-    }
-  }
-  return tier;
+// purchases: { productId: عدد مرات الشراء }. الصيدلية الإضافية لا تُحتسب بلا الترخيص الأول.
+function computeBranches(purchases) {
+  const count = {};
+  for (const [id, n] of Object.entries(purchases || {})) count[baseId(id)] = (count[baseId(id)] || 0) + n;
+  if (!count[BASE_PRODUCT]) return { branches: 0, extras: 0 };
+  const extras = Math.max(0, count[EXTRA_PRODUCT] || 0);
+  return { branches: 1 + extras, extras };
 }
 
-function buildLicense(productIds) {
-  const tier = computeTier(productIds);
+function buildLicense(purchases) {
+  const { branches, extras } = computeBranches(purchases);
   return {
-    tier,
-    maxBranches: tier,
-    maxDevices: tier > 0 ? tier * DEVICES_PER_PHARMACY : DEVICES_PER_PHARMACY,
-    products: [...new Set((productIds || []).map(baseId))].sort(),
+    tier: branches, // عدد الصيدليات المرخّصة
+    maxBranches: branches,
+    extras,
+    maxDevices: (branches || 1) * DEVICES_PER_PHARMACY,
     source: 'store'
   };
 }
@@ -51,8 +42,8 @@ function init() {
 function db() { init(); return (_db = _db || admin.firestore()); }
 function auth() { init(); return (_auth = _auth || admin.auth()); }
 
-// يجلب مشتريات الصيدلية من RevenueCat (مصدر الحقيقة، ويراعي الاسترداد) ثم يكتب الترخيص في Firestore
-async function fetchPurchasedProducts(appUserId) {
+// يجلب مشتريات الصيدلية من RevenueCat (مصدر الحقيقة) كعدّاد { productId: عدد }
+async function fetchPurchases(appUserId) {
   const key = process.env.RC_SECRET_KEY;
   if (!key) throw new Error('RC_SECRET_KEY is not set');
   const r = await fetch('https://api.revenuecat.com/v1/subscribers/' + encodeURIComponent(appUserId), {
@@ -60,24 +51,22 @@ async function fetchPurchasedProducts(appUserId) {
   });
   if (!r.ok) throw new Error('RevenueCat ' + r.status);
   const { subscriber } = await r.json();
-  const ids = new Set();
-  // المنتجات لمرة واحدة تظهر في non_subscriptions (كل منتج له قائمة عمليات شراء)
-  for (const [pid, list] of Object.entries(subscriber?.non_subscriptions || {})) if ((list || []).length) ids.add(pid);
-  // احتياط: منتجات تُعامل كاستحقاق نشط
-  for (const e of Object.values(subscriber?.entitlements || {})) {
-    const exp = e.expires_date ? new Date(e.expires_date).getTime() : Infinity;
-    if (e.product_identifier && exp > Date.now()) ids.add(e.product_identifier);
+  const counts = {};
+  // المنتجات لمرة واحدة تظهر في non_subscriptions: قائمة عمليات شراء لكل منتج (نتجاهل المستردّة)
+  for (const [pid, list] of Object.entries(subscriber?.non_subscriptions || {})) {
+    const n = (list || []).filter(t => !t.refunded_at && !t.is_refunded).length;
+    if (n) counts[pid] = n;
   }
-  return [...ids];
+  return counts;
 }
 
 async function syncPharmacyLicense(pharmacyId) {
   const ref = db().doc('pharmacies/' + pharmacyId);
   const snap = await ref.get();
   if (!snap.exists) return null;
-  const license = buildLicense(await fetchPurchasedProducts(pharmacyId));
+  const license = buildLicense(await fetchPurchases(pharmacyId));
   const cur = snap.data().license || {};
-  if (cur.tier === license.tier && (cur.products || []).join() === license.products.join()) return cur;
+  if (cur.tier === license.tier && cur.extras === license.extras) return cur;
   const next = { ...license, updatedAt: new Date().toISOString() };
   await ref.update({ license: next });
   return next;
@@ -107,4 +96,4 @@ async function getMember(pharmacyId, uid) {
 
 const body = req => (typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {});
 
-module.exports = { DEVICES_PER_PHARMACY, computeTier, buildLicense, db, auth, syncPharmacyLicense, cors, requireUser, getMember, body };
+module.exports = { DEVICES_PER_PHARMACY, computeBranches, buildLicense, db, auth, syncPharmacyLicense, cors, requireUser, getMember, body };
