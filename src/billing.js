@@ -1,10 +1,10 @@
 import { Capacitor } from '@capacitor/core';
 import { CONFIG } from './config.js';
 
-// الاشتراك عبر RevenueCat: يغلّف Google Play Billing وStoreKit (App Store) بواجهة واحدة.
+// الشراء عبر RevenueCat: يغلّف Google Play Billing وStoreKit (App Store) بواجهة واحدة.
+// التراخيص منتجات لمرة واحدة؛ الخادم يحسب الباقة من المشتريات ولا يعتمد على ما يقوله التطبيق.
 let Purchases = null;
 let configured = false;
-let listenerAdded = false;
 
 const platform = () => Capacitor.getPlatform();
 export const isNativeApp = () => Capacitor.isNativePlatform();
@@ -16,26 +16,25 @@ async function sdk() {
   return Purchases;
 }
 
-export function toEntitlement(info) {
-  const e = info?.entitlements?.active?.[CONFIG.revenueCat.entitlementId];
-  return { active: !!e, expiresAt: e?.expirationDate || null, productId: e?.productIdentifier || null, willRenew: e?.willRenew ?? null };
-}
+// معرّفات المنتجات (يجب أن تطابق Google Play وapi/_lib.js)
+export const BASE_PRODUCTS = { pharmacy_1: 1, pharmacy_2: 2, pharmacy_3: 3, pharmacy_5: 5 };
+export const UPGRADES = [
+  { id: 'upgrade_1_to_2', from: 1, to: 2 },
+  { id: 'upgrade_2_to_3', from: 2, to: 3 },
+  { id: 'upgrade_3_to_5', from: 3, to: 5 }
+];
+export const productKey = pkg => String(pkg?.product?.identifier || '').split(':')[0];
 
-// يربط الاشتراك بمعرّف الصيدلية حتى يُستعاد على أي جهاز للمالك
-export async function initBilling(appUserId, onChange) {
+// يربط المشتريات بمعرّف الصيدلية حتى تُستعاد على أي جهاز للمالك
+export async function initBilling(appUserId) {
   if (!isBillingConfigured()) return false;
   const P = await sdk();
   if (!configured) { await P.configure({ apiKey: apiKey(), appUserID: appUserId }); configured = true; }
   else await P.logIn({ appUserID: appUserId });
-  if (!listenerAdded) {
-    listenerAdded = true;
-    await P.addCustomerInfoUpdateListener(info => onChange?.(toEntitlement(info)));
-  }
   return true;
 }
-export async function getEntitlement() { const P = await sdk(); const { customerInfo } = await P.getCustomerInfo(); return toEntitlement(customerInfo); }
 export async function getPackages() { const P = await sdk(); const o = await P.getOfferings(); return o?.current?.availablePackages || []; }
-export async function purchase(pkg) { const P = await sdk(); const { customerInfo } = await P.purchasePackage({ aPackage: pkg }); return toEntitlement(customerInfo); }
-export async function restore() { const P = await sdk(); const { customerInfo } = await P.restorePurchases(); return toEntitlement(customerInfo); }
+export async function purchase(pkg) { const P = await sdk(); await P.purchasePackage({ aPackage: pkg }); }
+export async function restore() { const P = await sdk(); await P.restorePurchases(); }
 export async function logoutBilling() { if (!configured) return; try { const P = await sdk(); await P.logOut(); } catch (e) {} }
 export const wasCancelled = e => !!(e && (e.userCancelled || /cancel/i.test(String(e.message || ''))));

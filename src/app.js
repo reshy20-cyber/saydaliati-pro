@@ -1,12 +1,12 @@
 import { auth, db } from './firebase.js';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { getDoc, onSnapshot, updateDoc, writeBatch, increment } from 'firebase/firestore';
-import { S, hooks, isCloud, role, can, subscriptionActive, isReviewer, activeBranch, allowedBranches, requireCan, getCurrencySymbol } from './state.js';
+import { S, hooks, isCloud, role, can, licenseActive, isReviewer, activeBranch, allowedBranches, requireCan, getCurrencySymbol } from './state.js';
 import { escapeHtml, todayLocal, round2, uuid, validStock, fefoBatches, shareText, isNative } from './util.js';
 import { userRef, pharmacyRef, memberRef, branchesCol, branchCol, branchDoc, commitBatch, MAX_INVOICE_LINES } from './data.js';
 import { toast } from './ui.js';
 import * as panels from './panels.js';
-import { initBilling, getEntitlement, logoutBilling } from './billing.js';
+import { initBilling, logoutBilling } from './billing.js';
 
 const BRANCH_KEY = 'saydaliati_active_branch_v2:';
 const DEMO_KEY = 'saydaliati_demo_v2';
@@ -42,8 +42,8 @@ function updateSyncLabel() {
   if (!isCloud()) return;
   let text = stockMeta.pending ? 'بانتظار المزامنة مع السحابة…'
     : (!navigator.onLine ? 'دون إنترنت — العمل محفوظ على الجهاز' : 'متصل بالسحابة ✓');
-  if (!subscriptionActive()) text = 'الاشتراك غير فعّال — وضع العرض فقط | ' + text;
-  syncStatus(text, navigator.onLine && !stockMeta.pending && subscriptionActive());
+  if (!licenseActive()) text = 'الترخيص غير مفعّل — وضع العرض فقط | ' + text;
+  syncStatus(text, navigator.onLine && !stockMeta.pending && licenseActive());
 }
 function setBranchLabel() {
   const el = document.getElementById('branch-name-label');
@@ -149,6 +149,7 @@ async function startSession(user) {
     ensureBranch();
   }, e => console.warn('branches listener', e)));
 
+  panels.enforceDeviceLimit();
   setupBilling();
 }
 
@@ -193,25 +194,14 @@ function selectBranch(id) {
   }, e => console.warn('daily listener', e)));
 }
 
-// ================= الاشتراك (المالك) =================
-async function syncSubscription(ent) {
-  if (role() !== 'owner' || !ent) return;
-  const cur = S.session.pharmacy?.subscription || {};
-  if (!!cur.active === ent.active && (cur.expiresAt || null) === (ent.expiresAt || null)) return;
-  try {
-    await updateDoc(pharmacyRef(S.session.pharmacyId), {
-      subscription: { active: ent.active, expiresAt: ent.expiresAt || null, productId: ent.productId || null, source: 'store', updatedAt: new Date().toISOString() }
-    });
-  } catch (e) { console.warn('تعذر تحديث حالة الاشتراك', e); }
-}
+// ================= الترخيص (المالك) =================
+// الترخيص يكتبه الخادم فقط بعد التحقق من الشراء؛ هنا نربط المشتريات بمعرّف الصيدلية ونعرض شاشة الشراء عند غياب الترخيص
 async function setupBilling() {
   if (role() !== 'owner' || isReviewer()) return;
   try {
-    const ok = await initBilling(S.session.pharmacyId, ent => syncSubscription(ent));
+    const ok = await initBilling(S.session.pharmacyId);
     if (!ok) return;
-    const ent = await getEntitlement();
-    await syncSubscription(ent);
-    if (!ent.active) hooks.showPaywall();
+    if (!licenseActive()) hooks.showPaywall();
   } catch (e) { console.warn('billing', e); }
 }
 
@@ -693,7 +683,7 @@ window.getCurrencySymbol = getCurrencySymbol;
 
 Object.assign(hooks, {
   setSuppressAuth: v => { suppressAuth = v; },
-  startSession, stopSession, logout, selectBranch, syncSubscription, updateUI,
+  startSession, stopSession, logout, selectBranch, updateUI,
   showInvoice: showElectronicInvoice
 });
 

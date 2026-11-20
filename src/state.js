@@ -25,36 +25,44 @@ const ROLE_PERMS = {
   manager: ['sell', 'editStock', 'purchases', 'suppliers', 'returns', 'invoices', 'reports', 'backup'],
   cashier: ['sell', 'invoices']
 };
-// عمليات تعدّل البيانات: تتوقف عند انتهاء الاشتراك (القراءة والتصدير تبقى متاحة)
+// عمليات تعدّل البيانات: تتوقف إذا لم يكن للصيدلية ترخيص (القراءة والتصدير تبقى متاحة)
 export const WRITE_PERMS = new Set(['sell', 'editStock', 'purchases', 'suppliers', 'returns', 'employees', 'branches']);
 
 export const can = perm => isCloud() && (ROLE_PERMS[role()] || []).includes(perm);
 
 export const isReviewer = () => !!S.session.user?.email && (CONFIG.reviewerEmails || []).includes(S.session.user.email.toLowerCase());
 
-export function subscriptionActive() {
-  if (isReviewer()) return true;
-  const sub = S.session.pharmacy?.subscription;
-  if (!sub || !sub.active) return false;
-  if (!sub.expiresAt) return true;
-  return new Date(sub.expiresAt).getTime() + CONFIG.graceDays * 86400000 > Date.now();
+// الترخيص يكتبه الخادم فقط في pharmacies/{pid}.license بعد التحقق من الشراء (دفعة واحدة، بلا انتهاء)
+export function licenseTier() {
+  if (isReviewer()) return CONFIG.maxTier;
+  return Number(S.session.pharmacy?.license?.tier) || 0;
 }
+export const licenseActive = () => licenseTier() > 0;
+// عدد الصيدليات (الفروع النشطة) التي تسمح بها الباقة
+export const maxBranches = () => (isReviewer() ? CONFIG.maxTier : Number(S.session.pharmacy?.license?.maxBranches) || 0);
+export const activeBranchCount = () => S.session.branches.filter(b => b.status !== 'archived').length;
 
 export const activeBranch = () => S.session.branches.find(b => b.id === S.session.branchId) || null;
 export function allowedBranches() {
   const m = S.session.member;
   if (!m) return [];
   const list = m.allBranches ? S.session.branches : S.session.branches.filter(b => (m.branchIds || []).includes(b.id));
-  return list.filter(b => b.status !== 'archived');
+  const live = list.filter(b => b.status !== 'archived');
+  // بعد انخفاض الباقة (استرداد مثلاً) تبقى الصيدليات الأقدم ضمن الترخيص فقط
+  const cap = maxBranches();
+  if (!cap) return live;
+  const licensed = new Set(S.session.branches.filter(b => b.status !== 'archived').slice(0, cap).map(b => b.id));
+  return live.filter(b => licensed.has(b.id));
 }
 
-// يتحقق من الدخول والصلاحية والاشتراك قبل أي عملية
+// يتحقق من الدخول والصلاحية والترخيص قبل أي عملية
 export function requireCan(perm) {
   if (!isCloud()) { hooks.showAuthDialog?.('login'); return false; }
   if (!can(perm)) { alert('ليست لديك صلاحية لهذه العملية.'); return false; }
-  if (WRITE_PERMS.has(perm) && !subscriptionActive()) {
+  if (S.session.deviceBlocked) { alert('هذا الجهاز غير مصرح به. احذف جهازاً قديماً من الأجهزة المصرح بها.'); return false; }
+  if (WRITE_PERMS.has(perm) && !licenseActive()) {
     if (role() === 'owner') hooks.showPaywall?.();
-    else alert('اشتراك الصيدلية غير فعّال حالياً. تواصل مع مالك الصيدلية.');
+    else alert('الصيدلية بلا ترخيص مفعّل. تواصل مع مالك الصيدلية.');
     return false;
   }
   return true;

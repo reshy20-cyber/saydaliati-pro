@@ -4,7 +4,7 @@ import { toast } from './ui.js';
 
 // ===== مسارات Firestore =====
 // users/{uid}                              ← يحدد صيدلية المستخدم
-// pharmacies/{pid}                         ← بيانات الصيدلية والاشتراك
+// pharmacies/{pid}                         ← بيانات الصيدلية والترخيص (license يكتبه الخادم)
 // pharmacies/{pid}/members/{uid}           ← الموظفون وأدوارهم
 // pharmacies/{pid}/suppliers/{id}
 // pharmacies/{pid}/branches/{bid}          ← الفروع
