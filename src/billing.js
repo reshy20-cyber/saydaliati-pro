@@ -25,11 +25,25 @@ export const productKey = pkg => String(pkg?.product?.identifier || '').split(':
 export async function initBilling(appUserId) {
   if (!isBillingConfigured()) return false;
   const P = await sdk();
-  if (!configured) { await P.configure({ apiKey: apiKey(), appUserID: appUserId }); configured = true; }
+  if (!configured) { await P.configure({ apiKey: apiKey(), appUserID: appUserId }); configured = true; console.warn('billing configured'); }
   else await P.logIn({ appUserID: appUserId });
   return true;
 }
-export async function getPackages() { const P = await sdk(); const o = await P.getOfferings(); return o?.current?.availablePackages || []; }
+// مهلة انتظار: بدونها قد تبقى الشاشة معلّقة بلا رسالة إن لم يردّ المتجر
+const withTimeout = (promise, ms, label) => Promise.race([
+  promise,
+  new Promise((_, rej) => setTimeout(() => rej(new Error(label + ' — انتهت المهلة، تحقق من الإنترنت ومن تسجيل دخول حساب Google Play في المتجر')), ms)),
+]);
+export async function getPackages() {
+  const P = await sdk();
+  const o = await withTimeout(P.getOfferings(), 20000, 'تحميل الباقات');
+  const list = o?.current?.availablePackages || [];
+  if (!list.length) {
+    const ids = Object.keys(o?.all || {}).join(', ') || 'لا يوجد';
+    throw new Error('لا توجد باقات في العرض الحالي (Offerings: ' + ids + ')');
+  }
+  return list;
+}
 export async function purchase(pkg) { const P = await sdk(); await P.purchasePackage({ aPackage: pkg }); }
 export async function restore() { const P = await sdk(); await P.restorePurchases(); }
 export async function logoutBilling() { if (!configured) return; try { const P = await sdk(); await P.logOut(); } catch (e) {} }
