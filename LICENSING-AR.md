@@ -9,8 +9,8 @@
 ## المنتجات في Google Play (منتجان فقط)
 | المعرّف | النوع | الاستخدام | السعر (£) |
 |---|---|---|---|
-| pharmacy_1 | غير مستهلك (Non-consumable) | الترخيص الأول: صيدلية واحدة | 49.99 |
-| pharmacy_extra | **مستهلك (Consumable)** | صيدلية إضافية، يُشترى عدة مرات | 35 |
+| pharmacy_1 | غير مستهلك (Non-consumable في RevenueCat) | الترخيص الأول: صيدلية واحدة | 49.99 |
+| pharmacy_extra | **مستهلك (Consumable في RevenueCat)** | صيدلية إضافية، يُشترى عدة مرات | 35 |
 
 عدد الصيدليات المسموح = 1 + عدد مرات شراء pharmacy_extra (ولا تُحتسب الإضافية بلا pharmacy_1).
 
@@ -34,8 +34,8 @@
 - أسعار الصرف تقريبية: راجعها قبل الحفظ.
 
 ## خطوات الإعداد (مرة واحدة)
-1. **Play Console**: Monetize ← Products ← In-app products: أنشئ المنتجين أعلاه بنفس المعرّفين (pharmacy_extra من نوع مستهلك)، ثم اضبط الأسعار لكل دولة.
-2. **RevenueCat**: أضف المنتجين، وأنشئ Offering باسم `default` فيه Package (Custom) لكل منتج. ضع المفتاح العام في `src/config.js` (`androidApiKey`).
+1. **Play Console**: Monetize ← Products ← In-app products: أنشئ المنتجين أعلاه بنفس المعرّفين كمنتجين لمرة واحدة. لا يوجد خيار "مستهلك" في Play Console؛ التمييز بين المستهلك وغير المستهلك يُحدَّد في RevenueCat عند إضافة المنتج (pharmacy_extra = Consumable). ثم اضبط الأسعار لكل دولة.
+2. **RevenueCat**: أضف المنتجين (نوع pharmacy_1: Non-consumable، ونوع pharmacy_extra: Consumable)، وأنشئ Offering باسم `default` فيه Package (Custom) لكل منتج. ضع المفتاح العام في `src/config.js` (`androidApiKey`).
 3. **Firebase**: Project settings ← Service accounts ← Generate new private key.
 4. **Vercel** ← Settings ← Environment Variables:
    - `FIREBASE_SERVICE_ACCOUNT` = محتوى ملف JSON كاملاً
