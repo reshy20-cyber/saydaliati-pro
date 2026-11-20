@@ -2,7 +2,7 @@
 export const CONFIG = {
   revenueCat: {
     // من لوحة RevenueCat ← Project ← API keys (مفاتيح عامة، آمنة داخل التطبيق)
-    androidApiKey: 'REPLACE_WITH_REVENUECAT_ANDROID_PUBLIC_KEY',
+    androidApiKey: 'goog_TyqaSylfSAcwWyiGpWFeeEEIXPn',
     iosApiKey: 'REPLACE_WITH_REVENUECAT_IOS_PUBLIC_KEY',
     // الترخيص يُحسب على الخادم من مشتريات RevenueCat، فلا حاجة لاسم Entitlement هنا
     entitlementId: 'pro'
