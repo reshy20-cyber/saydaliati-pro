@@ -199,10 +199,13 @@ function selectBranch(id) {
 async function setupBilling() {
   if (role() !== 'owner' || isReviewer()) return;
   try {
-    const ok = await initBilling(S.session.pharmacyId);
+    const ok = await Promise.race([
+      initBilling(S.session.pharmacyId),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('initBilling timeout 15s')), 15000))
+    ]);
     if (!ok) return;
     if (!licenseActive()) hooks.showPaywall();
-  } catch (e) { console.warn('billing', e); }
+  } catch (e) { console.warn('billing', e); alert('billing: ' + (e && e.message ? e.message : e)); }
 }
 
 // ================= واجهة الشاشة الرئيسية والمخزون =================
